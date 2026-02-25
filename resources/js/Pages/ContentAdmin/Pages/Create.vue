@@ -285,7 +285,7 @@
 
         <!-- Upload -->
         <div class="border-2 border-dashed border-slate-700 rounded-lg p-4 text-center">
-          <p class="text-gray-400 mb-2 text-sm">Upload image (max 2MB)</p>
+          <p class="text-gray-400 mb-2 text-sm">Upload image</p>
 
           <input
             type="file"
@@ -431,21 +431,6 @@
     </div>
   </div>
 </div>
-
-          <!-- Content (fallback)
-<div class="mb-6">
-  <label class="block text-gray-300 text-sm font-medium mb-2">Content (optional fallback)</label>
-  <textarea
-    v-model="form.content"
-    rows="6"
-    class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-    placeholder="Optional fallback content..."
-  ></textarea>
-  <p class="text-gray-500 text-sm mt-1">
-    Ako koristiš Blocks, ovo može ostati prazno (auto se puni iz text blokova pri snimanju).
-  </p>
-</div> -->
-
 
           <!-- SEO Meta -->
           <div class="mb-6">
@@ -623,20 +608,18 @@ const handleBlockImageUpload = async (event, i) => {
   if (!file) return
 
   if (file.size > 150 * 1024 * 1024) {
-    alert('File size must be less than 2MB')
+    alert('File size must be less than 150MB')
     event.target.value = ''
     return
   }
 
-  // Preview (base64) odmah
+  // preview
   const reader = new FileReader()
   reader.onload = async (e) => {
-    const base64 = e.target.result
-    form.blocks[i].src = base64
+    form.blocks[i].src = e.target.result
 
     try {
-      // Upload na server -> URL
-      const url = await uploadImage(base64)
+      const url = await uploadImage(file)   // <-- DIREKTNO FILE
       form.blocks[i].src = url
     } catch (err) {
       console.error(err)
@@ -752,16 +735,14 @@ const submitForm = async () => {
   })
 }
 
-const uploadImage = async (base64Image) => {
-  const blob = dataURLtoBlob(base64Image)
+const uploadImage = async (file) => {
   const formData = new FormData()
-  formData.append('image', blob, 'uploaded-image.jpg')
+  formData.append('image', file, file.name)
 
   const response = await axios.post('/upload-image', formData, {
     headers: {
-      'Content-Type': 'multipart/form-data',
-      'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-    }
+      'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+    },
   })
 
   return response.data.url
