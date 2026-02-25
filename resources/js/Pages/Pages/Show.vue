@@ -50,7 +50,7 @@
           <div>
             <h1 :class="`mb-2 ${theme.title}`">{{ page.title }}</h1>
             <div :class="`flex flex-wrap items-center gap-3 text-sm ${theme.meta}`">
-              <span v-if="page.author?.name">By {{ page.author.name }}</span>
+              <span >By Norevia Team</span>
               <span v-if="page.published_at">• {{ formatDate(page.published_at) }}</span>
               <span v-if="typeof page.views !== 'undefined'">• {{ page.views }} views</span>
             </div>
