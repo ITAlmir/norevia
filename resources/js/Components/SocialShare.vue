@@ -16,7 +16,8 @@
     </a>
     
     <!-- Copy URL -->
-    <button @click="copyUrl" 
+     <button v-if="canCopy"
+     @click="copyUrl" 
             class="px-3 py-1 bg-slate-600 hover:bg-slate-700 text-white rounded text-sm">
       Copy Link
     </button>
@@ -25,6 +26,14 @@
 
 <script setup>
 import { computed } from 'vue'
+import { usePage } from '@inertiajs/vue3'
+
+const inertia = usePage()
+
+const canCopy = computed(() => {
+  const role = inertia.props.auth?.user?.role
+  return role === 'super_admin' || role === 'content_admin'
+})
 
 const props = defineProps({
   url: {
