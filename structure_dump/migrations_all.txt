@@ -1,0 +1,992 @@
+﻿
+
+===== 0001_01_01_000000_create_users_table.php =====
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('users', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->string('email')->unique();
+            $table->timestamp('email_verified_at')->nullable();
+            $table->string('password');
+            $table->string('role')->default('user');
+            $table->rememberToken();
+            $table->timestamps();
+        });
+
+        Schema::create('password_reset_tokens', function (Blueprint $table) {
+            $table->string('email')->primary();
+            $table->string('token');
+            $table->timestamp('created_at')->nullable();
+        });
+
+        Schema::create('sessions', function (Blueprint $table) {
+            $table->string('id')->primary();
+            $table->foreignId('user_id')->nullable()->index();
+            $table->string('ip_address', 45)->nullable();
+            $table->text('user_agent')->nullable();
+            $table->longText('payload');
+            $table->integer('last_activity')->index();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('users');
+        Schema::dropIfExists('password_reset_tokens');
+        Schema::dropIfExists('sessions');
+    }
+};
+
+
+===== 0001_01_01_000001_create_cache_table.php =====
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('cache', function (Blueprint $table) {
+            $table->string('key')->primary();
+            $table->mediumText('value');
+            $table->integer('expiration')->index();
+        });
+
+        Schema::create('cache_locks', function (Blueprint $table) {
+            $table->string('key')->primary();
+            $table->string('owner');
+            $table->integer('expiration')->index();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('cache');
+        Schema::dropIfExists('cache_locks');
+    }
+};
+
+
+===== 0001_01_01_000002_create_jobs_table.php =====
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('jobs', function (Blueprint $table) {
+            $table->id();
+            $table->string('queue')->index();
+            $table->longText('payload');
+            $table->unsignedTinyInteger('attempts');
+            $table->unsignedInteger('reserved_at')->nullable();
+            $table->unsignedInteger('available_at');
+            $table->unsignedInteger('created_at');
+        });
+
+        Schema::create('job_batches', function (Blueprint $table) {
+            $table->string('id')->primary();
+            $table->string('name');
+            $table->integer('total_jobs');
+            $table->integer('pending_jobs');
+            $table->integer('failed_jobs');
+            $table->longText('failed_job_ids');
+            $table->mediumText('options')->nullable();
+            $table->integer('cancelled_at')->nullable();
+            $table->integer('created_at');
+            $table->integer('finished_at')->nullable();
+        });
+
+        Schema::create('failed_jobs', function (Blueprint $table) {
+            $table->id();
+            $table->string('uuid')->unique();
+            $table->text('connection');
+            $table->text('queue');
+            $table->longText('payload');
+            $table->longText('exception');
+            $table->timestamp('failed_at')->useCurrent();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('jobs');
+        Schema::dropIfExists('job_batches');
+        Schema::dropIfExists('failed_jobs');
+    }
+};
+
+
+===== 2026_01_21_224113_create_categories_table.php =====
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('categories', function (Blueprint $table) {
+            $table->id();
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('categories');
+    }
+};
+
+
+===== 2026_01_21_224113_create_items_table.php =====
+
+<?php
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration {
+    public function up(): void
+    {
+        Schema::create('items', function (Blueprint $table) {
+            $table->id();
+
+            // Osnovno
+            $table->string('title');
+            $table->string('slug')->unique();
+            $table->text('description')->nullable();
+
+            // Kategorija / tip
+            $table->string('category')->index(); // gaming, tools, apps (ili enum kasnije)
+
+            // Verzija / meta
+            $table->string('version')->nullable();
+            $table->unsignedBigInteger('size_bytes')->nullable();
+            $table->string('os')->nullable(); // windows/mac/linux ili null
+
+            // Fajl
+            $table->string('file_path'); // npr: downloads/tools/ping-monitor.zip
+            $table->string('original_filename')->nullable();
+
+            // Thumbnail
+            $table->string('thumbnail_path')->nullable();
+
+            // Sigurnost / status
+            $table->string('scan_status')->default('unknown'); // unknown|clean|flagged
+            $table->string('sha256')->nullable();
+
+            // BrojaÄi (brzo za listanje bez groupBy)
+            $table->unsignedBigInteger('download_count')->default(0);
+
+            // Publish
+            $table->boolean('is_published')->default(true);
+            $table->timestamp('published_at')->nullable();
+
+            $table->timestamps();
+
+            $table->index(['category', 'is_published']);
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('items');
+    }
+};
+
+
+===== 2026_01_22_003729_create_pages_table.php =====
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('pages', function (Blueprint $table) {
+            $table->id();
+            $table->string('title');
+            $table->string('slug')->unique();
+            $$table->text('content')->nullable()->change();
+            $table->string('featured_image')->nullable();
+            $table->string('image_caption')->nullable();
+            $table->string('meta_title')->nullable();
+            $table->text('meta_description')->nullable();
+            $table->string('status')->default('draft'); // draft, published, archived
+            $table->foreignId('user_id')->constrained()->onDelete('cascade'); // autor
+            $table->integer('views')->default(0);
+            $table->timestamps();
+            $table->timestamp('published_at')->nullable();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('pages');
+    }
+};
+
+
+===== 2026_01_22_004906_create_download_logs_table.php =====
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('download_logs', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('item_id')->constrained()->onDelete('cascade');
+            $table->foreignId('user_id')->nullable()->constrained()->onDelete('cascade');
+            $table->string('ip_address');
+            $table->text('user_agent')->nullable();
+            $table->boolean('is_guest')->default(false);
+            $table->timestamps();
+            
+            $table->index(['item_id', 'user_id']);
+            $table->index('created_at');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('download_logs');
+    }
+};
+
+
+===== 2026_01_22_152208_add_role_to_users.php =====
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::table('users', function (Blueprint $table) {
+            //
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::table('users', function (Blueprint $table) {
+            //
+        });
+    }
+};
+
+
+===== 2026_02_04_122252_create_sponsors_table.php =====
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+{
+    Schema::create('sponsors', function (Blueprint $table) {
+        $table->id();
+        $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+        $table->string('name');
+        $table->string('email')->nullable();
+        $table->string('company')->nullable();
+        $table->string('website')->nullable();
+        $table->text('notes')->nullable();
+        $table->timestamps();
+    });
+}
+
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('sponsors');
+    }
+};
+
+
+===== 2026_02_04_122455_create_collaborations_table.php =====
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+   public function up(): void
+{
+    Schema::create('collaborations', function (Blueprint $table) {
+        $table->id();
+
+        $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+        $table->foreignId('sponsor_id')->constrained()->cascadeOnDelete();
+
+        $table->string('title');
+        $table->string('status')->default('idea');
+
+        $table->decimal('price', 10, 2)->nullable();
+        $table->date('start_date')->nullable();
+        $table->date('end_date')->nullable();
+
+        $table->date('follow_up_date')->nullable();
+        $table->text('notes')->nullable();
+
+        $table->timestamps();
+    });
+}
+
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('collaborations');
+    }
+};
+
+
+===== 2026_02_09_143517_add_reminder_prefs_to_users_table.php =====
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration {
+    public function up(): void
+    {
+        Schema::table('users', function (Blueprint $table) {
+            $table->boolean('email_reminders')->default(true);
+            $table->time('reminder_time')->default('09:00:00');
+            $table->timestamp('last_followup_digest_sent_at')->nullable()->index();
+            $table->timestamp('last_followup_escalation_sent_at')->nullable()->index();
+            $table->unsignedTinyInteger('reminder_days_before')->default(0);
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::table('users', function (Blueprint $table) {
+            $table->dropColumn([
+                'email_reminders',
+                'reminder_time',
+                'last_followup_digest_sent_at',
+                'last_followup_escalation_sent_at',
+            ]);
+        });
+    }
+};
+
+
+===== 2026_02_10_001147_add_reminder_days_before_to_users_table.php =====
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::table('users', function (Blueprint $table) {
+            //
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::table('users', function (Blueprint $table) {
+            //
+        });
+    }
+};
+
+
+===== 2026_02_10_001323_create_collaboration_reminders_table.php =====
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('collaboration_reminders', function (Blueprint $t) {
+  $t->id();
+  $t->foreignId('user_id')->constrained()->cascadeOnDelete();
+  $t->foreignId('collaboration_id')->constrained()->cascadeOnDelete();
+
+  $t->dateTime('send_at')->index();
+  $t->string('status')->default('pending')->index(); // pending|sent|cancelled|failed
+  $t->dateTime('sent_at')->nullable();
+  $t->text('last_error')->nullable();
+
+  $t->string('dedupe_key')->unique(); // npr u:1|c:33|at:2026-02-10 09:00
+  $t->timestamps();
+  $t->index(['collaboration_id','status']);
+});
+
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('collaboration_reminders');
+    }
+};
+
+
+===== 2026_02_10_020516_add_missing_reminder_columns_to_users_table.php =====
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration {
+    public function up(): void
+    {
+        Schema::table('users', function (Blueprint $table) {
+            if (!Schema::hasColumn('users', 'reminders_enabled')) {
+                $table->boolean('reminders_enabled')->default(true);
+            }
+
+            if (!Schema::hasColumn('users', 'reminder_days_before')) {
+                $table->unsignedTinyInteger('reminder_days_before')->default(0);
+            }
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::table('users', function (Blueprint $table) {
+            if (Schema::hasColumn('users', 'reminders_enabled')) {
+                $table->dropColumn('reminders_enabled');
+            }
+
+            if (Schema::hasColumn('users', 'reminder_days_before')) {
+                $table->dropColumn('reminder_days_before');
+            }
+        });
+    }
+};
+
+
+===== 2026_02_10_133401_add_reminder_overrides_to_collaborations_table.php =====
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration {
+    public function up(): void
+    {
+        Schema::table('collaborations', function (Blueprint $table) {
+            $table->boolean('reminder_enabled')->nullable(); // null = use user default
+            $table->string('reminder_time')->nullable(); // "08:30"
+            $table->unsignedTinyInteger('reminder_days_before')->nullable(); // 0..30
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::table('collaborations', function (Blueprint $table) {
+            $table->dropColumn(['reminder_enabled','reminder_time','reminder_days_before']);
+        });
+    }
+};
+
+
+===== 2026_02_10_135058_add_channel_to_collaboration_reminders_table.php =====
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration {
+    public function up(): void
+    {
+        Schema::table('collaboration_reminders', function (Blueprint $table) {
+            $table->string('channel')->default('email');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::table('collaboration_reminders', function (Blueprint $table) {
+            $table->dropColumn('channel');
+        });
+    }
+};
+
+
+
+===== 2026_02_10_204521_add_reminder_send_at_to_collaborations_table.php =====
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::table('collaborations', function (Blueprint $table) {
+    $table->dateTime('reminder_send_at')->nullable();
+});
+
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::table('collaborations', function (Blueprint $table) {
+            //
+        });
+    }
+};
+
+
+===== 2026_02_10_223234_add_digest_prefs_to_users_table.php =====
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration {
+  public function up(): void
+  {
+    Schema::table('users', function (Blueprint $table) {
+      // reminders_enabled veÄ‡ postoji - ne diramo
+
+      if (!Schema::hasColumn('users', 'daily_digest_enabled')) {
+        $table->boolean('daily_digest_enabled')->default(false);
+      }
+
+      if (!Schema::hasColumn('users', 'daily_digest_time')) {
+        $table->string('daily_digest_time', 5)->default('08:30'); // HH:mm
+      }
+    });
+  }
+
+  public function down(): void
+  {
+    Schema::table('users', function (Blueprint $table) {
+      if (Schema::hasColumn('users', 'daily_digest_enabled')) {
+        $table->dropColumn('daily_digest_enabled');
+      }
+
+      if (Schema::hasColumn('users', 'daily_digest_time')) {
+        $table->dropColumn('daily_digest_time');
+      }
+    });
+  }
+};
+
+
+
+===== 2026_02_11_132909_add_layout_blocks_type_to_pages_table.php =====
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration {
+    public function up(): void
+    {
+        Schema::table('pages', function (Blueprint $table) {
+            $table->string('page_type')->default('post')->after('slug'); // news,gaming,horoscope,post
+            $table->string('layout')->default('minimal')->after('page_type'); // minimal,classic,magazine,hero
+            $table->json('blocks')->nullable()->after('content'); // glavni editor (blokovi)
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::table('pages', function (Blueprint $table) {
+            $table->dropColumn(['page_type', 'layout', 'blocks']);
+        });
+    }
+};
+
+
+===== 2026_02_11_153934_sqlite_make_pages_content_nullable_rebuild.php =====
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        // 1) napravi novu tabelu sa istim kolonama ali content nullable
+        Schema::create('pages_new', function (Blueprint $table) {
+            $table->id();
+            $table->string('title');
+            $table->string('slug')->unique();
+
+            // âœ… nullable content
+            $table->text('content')->nullable();
+
+            $table->string('featured_image')->nullable();
+            $table->string('image_caption')->nullable();
+            $table->string('meta_title')->nullable();
+            $table->text('meta_description')->nullable();
+            $table->string('status')->default('draft');
+            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->integer('views')->default(0);
+            $table->timestamps();
+            $table->timestamp('published_at')->nullable();
+
+            $table->string('page_type')->default('post');
+            $table->string('layout')->default('minimal');
+            $table->json('blocks')->nullable(); // ok iako SQLite piÅ¡e TEXT
+        });
+
+        // 2) kopiraj podatke
+        DB::statement("
+            INSERT INTO pages_new (
+                id, title, slug, content, featured_image, image_caption, meta_title, meta_description,
+                status, user_id, views, created_at, updated_at, published_at, page_type, layout, blocks
+            )
+            SELECT
+                id, title, slug, content, featured_image, image_caption, meta_title, meta_description,
+                status, user_id, views, created_at, updated_at, published_at, page_type, layout, blocks
+            FROM pages
+        ");
+
+        // 3) obriÅ¡i staru i preimenuj novu
+        Schema::drop('pages');
+        Schema::rename('pages_new', 'pages');
+    }
+
+    public function down(): void
+    {
+        // rollback: rebuild nazad na NOT NULL content
+        Schema::create('pages_old', function (Blueprint $table) {
+            $table->id();
+            $table->string('title');
+            $table->string('slug')->unique();
+
+            // âŒ not null content (staro stanje)
+            $table->text('content');
+
+            $table->string('featured_image')->nullable();
+            $table->string('image_caption')->nullable();
+            $table->string('meta_title')->nullable();
+            $table->text('meta_description')->nullable();
+            $table->string('status')->default('draft');
+            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->integer('views')->default(0);
+            $table->timestamps();
+            $table->timestamp('published_at')->nullable();
+
+            $table->string('page_type')->default('post');
+            $table->string('layout')->default('minimal');
+            $table->json('blocks')->nullable();
+        });
+
+        // ako content null, postavi '' da rollback ne pukne
+        DB::statement("
+            INSERT INTO pages_old (
+                id, title, slug, content, featured_image, image_caption, meta_title, meta_description,
+                status, user_id, views, created_at, updated_at, published_at, page_type, layout, blocks
+            )
+            SELECT
+                id, title, slug, COALESCE(content, ''), featured_image, image_caption, meta_title, meta_description,
+                status, user_id, views, created_at, updated_at, published_at, page_type, layout, blocks
+            FROM pages
+        ");
+
+        Schema::drop('pages');
+        Schema::rename('pages_old', 'pages');
+    }
+};
+
+
+===== 2026_02_12_125629_create_downloads_table.php =====
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('downloads', function (Blueprint $table) {
+            $table->id();
+
+            // veza na postojeÄ‡i items.id
+            $table->foreignId('item_id')
+                ->constrained('items')
+                ->onDelete('cascade');
+
+            // metadata za download
+            $table->string('slug')->unique();              // npr fps-optimizer
+            $table->string('title');                       // display naziv
+            $table->text('description')->nullable();
+
+            $table->string('version')->default('1.0.0');
+            $table->string('original_filename')->nullable(); // npr Setup.zip
+            $table->string('stored_path');                 // npr downloads/fps-optimizer/Setup.zip
+            $table->unsignedBigInteger('file_size')->default(0); // bytes
+
+            $table->string('sha256', 64)->nullable();       // hash fajla
+            $table->string('scan_status')->default('unknown'); // unknown|safe|warning|malicious
+
+            // cache counter (brzo listanje bez COUNT na logs)
+            $table->unsignedBigInteger('download_count')->default(0);
+
+            $table->boolean('is_published')->default(true);
+
+            $table->timestamps();
+
+            $table->unique('item_id'); // 1 item -> 1 download (sigurno i jasno)
+            $table->index(['is_published', 'created_at']);
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('downloads');
+    }
+};
+
+
+===== 2026_02_12_135040_rebuild_items_table_schema.php =====
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        // 1) ugasi FK privremeno (SQLite + postojeÄ‡e tabele koje referenciraju items)
+        Schema::disableForeignKeyConstraints();
+
+        // 2) napravi novu tabelu items_new sa TAÄŒNOM strukturom koju Å¾eliÅ¡
+        Schema::create('items_new', function (Blueprint $table) {
+            $table->id();
+
+            // Osnovno
+            $table->string('title');
+            $table->string('slug')->unique();
+            $table->text('description')->nullable();
+
+            // Kategorija / tip
+            $table->string('category')->index();
+
+            // Verzija / meta
+            $table->string('version')->nullable();
+            $table->unsignedBigInteger('size_bytes')->nullable();
+            $table->string('os')->nullable();
+
+            // Fajl
+            $table->string('file_path');
+            $table->string('original_filename')->nullable();
+
+            // Thumbnail
+            $table->string('thumbnail_path')->nullable();
+
+            // Sigurnost / status
+            $table->string('scan_status')->default('unknown');
+            $table->string('sha256')->nullable();
+
+            // BrojaÄi
+            $table->unsignedBigInteger('download_count')->default(0);
+
+            // Publish
+            $table->boolean('is_published')->default(true);
+            $table->timestamp('published_at')->nullable();
+
+            $table->timestamps();
+
+            $table->index(['category', 'is_published']);
+        });
+
+        // 3) prekopiraj postojeÄ‡e podatke iz items u items_new (ako ih ima)
+        // PoÅ¡to stara tabela ima samo id/created_at/updated_at, kopiramo to,
+        // a ostalo popunjavamo default/placeholder vrijednostima da NOT NULL polja proÄ‘u.
+        // (title, slug, category, file_path su NOT NULL)
+        DB::statement("
+            INSERT INTO items_new (
+                id, title, slug, category, file_path,
+                created_at, updated_at
+            )
+            SELECT
+                id,
+                'Recovered Item #' || id,
+                'recovered-item-' || id,
+                'tools',
+                'downloads/missing.bin',
+                created_at,
+                updated_at
+            FROM items
+        ");
+
+        // 4) drop stari items i zamijeni novim
+        DB::statement("DROP TABLE items");
+        DB::statement("ALTER TABLE items_new RENAME TO items");
+
+        // 5) upali FK nazad
+        Schema::enableForeignKeyConstraints();
+    }
+
+    public function down(): void
+    {
+        // namjerno prazno - rollback ovog bi bio riziÄan bez backup-a
+    }
+};
+
+
+===== 2026_02_12_211759_add_featured_to_items_table.php =====
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration {
+    public function up(): void
+    {
+        Schema::table('items', function (Blueprint $table) {
+            $table->boolean('is_featured')->default(false)->index();
+            $table->unsignedInteger('featured_order')->nullable()->index();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::table('items', function (Blueprint $table) {
+            $table->dropColumn(['is_featured', 'featured_order']);
+        });
+    }
+};

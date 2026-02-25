@@ -1,0 +1,114 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Norevia UI helpers (light + dark) */
+.ui-page-title {
+  @apply text-slate-900 dark:text-white;
+}
+.ui-page-subtitle {
+  @apply text-slate-600 dark:text-slate-300;
+}
+
+.ui-card {
+  @apply rounded-xl border bg-white border-slate-200;
+}
+.dark .ui-card {
+  @apply bg-slate-800/50 border-slate-700;
+}
+
+.ui-card-hover {
+  @apply hover:bg-slate-50 hover:border-slate-300 transition;
+}
+.dark .ui-card-hover {
+  @apply hover:bg-slate-700/30 hover:border-slate-500;
+}
+
+.ui-text {
+  @apply text-slate-900 dark:text-gray-200;
+}
+.ui-muted {
+  @apply text-slate-600 dark:text-gray-300;
+}
+.ui-subtle {
+  @apply text-slate-500 dark:text-gray-400;
+}
+
+.ui-input {
+  @apply bg-white border border-slate-300 text-slate-900 rounded-lg px-4 py-2 outline-none;
+}
+.dark .ui-input {
+  @apply bg-slate-900 border-slate-700 text-gray-200;
+}
+
+.ui-select {
+  @apply bg-white border border-slate-300 text-slate-900 rounded-lg px-4 py-2;
+}
+.dark .ui-select {
+  @apply bg-slate-900 border-slate-700 text-gray-200;
+}
+/* Tables */
+.ui-table {
+  @apply w-full table-auto border-collapse;
+}
+.ui-thead th {
+  @apply text-left text-slate-700 border-b border-slate-200 py-2;
+}
+.dark .ui-thead th {
+  @apply text-gray-200 border-slate-700;
+}
+.ui-tr {
+  @apply border-b border-slate-200;
+}
+.dark .ui-tr {
+  @apply border-slate-800/60;
+}
+.ui-td {
+  @apply py-3 text-slate-800;
+}
+.dark .ui-td {
+  @apply text-gray-200;
+}
+
+/* Chips / filter bar */
+.ui-chip {
+  @apply inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm border;
+}
+.ui-chip-x {
+  @apply w-5 h-5 inline-flex items-center justify-center rounded-full;
+}
+
+/* Buttons */
+.ui-btn {
+  @apply px-4 py-2 rounded-lg font-medium border transition;
+}
+.ui-btn-primary {
+  @apply bg-slate-900 text-white border-slate-900 hover:bg-slate-800;
+}
+.dark .ui-btn-primary {
+  @apply bg-sky-700 border-sky-700 hover:bg-sky-600;
+}
+.ui-btn-soft {
+  @apply bg-white text-slate-800 border-slate-300 hover:bg-slate-50;
+}
+.dark .ui-btn-soft {
+  @apply bg-slate-700 text-white border-slate-600 hover:bg-slate-600;
+}
+
+/* Section titles */
+.ui-section-title {
+  @apply text-xl font-bold text-slate-900;
+}
+.dark .ui-section-title {
+  @apply text-gray-100;
+}
+.ui-section-subtitle {
+  @apply text-sm text-slate-600;
+}
+.dark .ui-section-subtitle {
+  @apply text-gray-200;
+}
+/* subtle card shadow for light mode */
+.ui-soft-shadow {
+  box-shadow: 0 10px 30px -18px rgba(2, 6, 23, 0.35);
+}
