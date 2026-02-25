@@ -16,11 +16,14 @@
     </a>
     
     <!-- Copy URL -->
-     <button v-if="canCopy"
-     @click="copyUrl" 
-            class="px-3 py-1 bg-slate-600 hover:bg-slate-700 text-white rounded text-sm">
-      Copy Link
-    </button>
+     <button
+  v-if="$page.props.canCopyUrl"
+  type="button"
+  @click="copyUrl"
+  :class="`mt-5 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${theme.btn}`"
+>
+  Copy URL
+</button>
   </div>
 </template>
 

@@ -50,10 +50,19 @@ class AppServiceProvider extends ServiceProvider
 
         // existing
         Inertia::share([
-            'canLogin' => Route::has('login'),
-            'canRegister' => Route::has('register'),
-            'appName' => config('app.name'),
-        ]);
+    'canLogin' => Route::has('login'),
+    'canRegister' => Route::has('register'),
+    'appName' => config('app.name'),
+
+    // ✅ auth info available in Vue/Inertia props
+    'auth' => fn () => [
+        'user' => auth()->user(),
+    ],
+
+    // ✅ only content_admin + super_admin can see Copy URL button
+    'canCopyUrl' => fn () => auth()->check()
+        && in_array(auth()->user()->role, ['super_admin', 'content_admin'], true),
+]);
 
         Vite::prefetch(concurrency: 3);
     }

@@ -50,12 +50,12 @@
           </div>
 
           <button
-  v-if="canCopy"
+  v-if="$page.props.canCopyUrl"
   type="button"
   @click="copyUrl"
   :class="`mt-5 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${theme.btn}`"
 >
-  Copy URL v999
+  Copy URL
 </button>
         </div>
       </header>
