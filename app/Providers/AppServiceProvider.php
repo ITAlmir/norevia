@@ -20,6 +20,9 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        if (app()->environment('production')) {
+    URL::forceScheme('https');
+}
         // ✅ SQLite stability (WAL + timeout)
         if (config('database.default') === 'sqlite') {
            // DB::statement('PRAGMA journal_mode = WAL;');
