@@ -16,7 +16,7 @@
           </div>
 
           <button
-  v-if="canCopy"
+  v-if="canCopyUrl"
   type="button"
   @click="copyUrl"
   :class="`mt-5 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${theme.btn}`"
@@ -89,6 +89,8 @@ import MainLayout from '@/Layouts/MainLayout.vue'
 import { ref, computed } from 'vue'
 import { usePage } from '@inertiajs/vue3'
 
+const inertia = usePage()
+
 const inertiaPage = usePage()
 
 const page = usePage()
@@ -142,12 +144,10 @@ function nl2brSafe(text) {
     .replace(/\r/g, '\n')
     .replace(/\n/g, '<br>')
 }
-
-const canCopy = computed(() => {
-  const user = inertiaPage.props?.auth?.user
-  if (!user) return false
-
-  return user.role === 'super_admin' || user.role === 'content_admin'
+console.log(inertiaPage.props)
+const canCopyUrl = computed(() => {
+  const role = inertia.props.auth?.user?.role
+  return role === 'super_admin' || role === 'content_admin'
 })
 </script>
 <style scoped>

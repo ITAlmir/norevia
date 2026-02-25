@@ -248,6 +248,8 @@ import PublicLayout from '../../Layouts/PublicLayout.vue'
 import ContentBlocks from '../../Components/ContentBlocks.vue'
 import { usePage,  Link} from '@inertiajs/vue3'
 
+const inertia = usePage()
+
 const inertiaPage = usePage()
 
 const props = defineProps({
@@ -405,10 +407,8 @@ const copyUrl = () => {
 }
 
 
-const canCopy = computed(() => {
-  const user = inertiaPage.props?.auth?.user
-  if (!user) return false
-
-  return user.role === 'super_admin' || user.role === 'content_admin'
+const canCopyUrl = computed(() => {
+  const role = inertia.props.auth?.user?.role
+  return role === 'super_admin' || role === 'content_admin'
 })
 </script>
