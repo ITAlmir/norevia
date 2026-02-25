@@ -35,7 +35,8 @@ use App\Http\Controllers\PublicPageController;
     Route::get('/blog/{topic}', [BlogController::class, 'topic'])->name('blog.topic');
     Route::get('/blog/{topic}/{slug}', [BlogController::class, 'show'])->name('blog.show');
 
-
+    // Upload image (auth already applied by group)
+    Route::post('/upload-image', [ImageUploadController::class, 'store']);
 
 // --------------------
 // Download routes
@@ -393,9 +394,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/super-admin', [SuperAdminController::class, 'dashboard'])->name('super.dashboard');
     Route::get('/super-admin/users', [SuperAdminController::class, 'users'])->name('super.users');
     Route::post('/super-admin/users/{user}/role', [SuperAdminController::class, 'updateRole']);
-
-    // Upload image (auth already applied by group)
-    Route::post('/upload-image', [ImageUploadController::class, 'store']);
 
     // Page CRUD
     Route::resource('/content-admin/pages', PageController::class)->names('pages');
