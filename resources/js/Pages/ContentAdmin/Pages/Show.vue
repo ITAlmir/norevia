@@ -7,7 +7,7 @@
           <div>
             <h1 class="text-3xl font-bold text-white mb-2">{{ page.title }}</h1>
             <div class="flex flex-wrap items-center gap-3 text-gray-400 text-sm">
-              <span>By {{ page.author?.name || 'Unknown' }}</span>
+              <span>By Norevia Team</span>
               <span>•</span>
               <span>{{ formatDate(page.published_at) }}</span>
               <span v-if="page.views !== undefined">•</span>
