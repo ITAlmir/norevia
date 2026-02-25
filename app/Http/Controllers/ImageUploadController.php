@@ -50,67 +50,25 @@ class ImageUploadController extends Controller
     }
 
      public function store(Request $request)
-    {
-        Log::info('Image upload started', [
-            'has_file' => $request->hasFile('image'),
-            'all_data' => $request->all()
-        ]);
+{
+    Log::info('Image upload started', [
+        'has_file' => $request->hasFile('image'),
+        'content_type' => $request->header('content-type'),
+    ]);
 
-        if (!$request->hasFile('image')) {
-            Log::error('No image file in request');
-            return response()->json([
-                'success' => false,
-                'error' => 'No image file provided'
-            ], 400);
-        }
+    $request->validate([
+        'image' => 'required|file|image|max:51200', // 50MB
+    ]);
 
-        $file = $request->file('image');
-        
-        if (!$file->isValid()) {
-            Log::error('Invalid image file', ['error' => $file->getErrorMessage()]);
-            return response()->json([
-                'success' => false,
-                'error' => 'Invalid image file: ' . $file->getErrorMessage()
-            ], 400);
-        }
+    $file = $request->file('image');
 
-        try {
-            // Kreiraj direktno u public/uploads folder
-            $filename = Str::random(20) . '_' . time() . '.' . $file->getClientOriginalExtension();
-            
-            // Kreiraj uploads folder ako ne postoji
-            $uploadsPath = public_path('uploads');
-            if (!file_exists($uploadsPath)) {
-                mkdir($uploadsPath, 0777, true);
-            }
-            
-            // Premjesti fajl direktno
-            $file->move($uploadsPath, $filename);
-            
-            // Vrati direktan URL
-            $url = url('uploads/' . $filename);
-            
-            Log::info('Image uploaded successfully', [
-                'filename' => $filename,
-                'url' => $url,
-                'path' => $uploadsPath . '/' . $filename
-            ]);
-            
-            return response()->json([
-                'success' => true,
-                'url' => $url,
-                'path' => 'uploads/' . $filename
-            ]);
-            
-        } catch (\Exception $e) {
-            Log::error('Image upload failed: ' . $e->getMessage(), [
-                'trace' => $e->getTraceAsString()
-            ]);
-            
-            return response()->json([
-                'success' => false,
-                'error' => 'Upload failed: ' . $e->getMessage()
-            ], 500);
-        }
-    }
+    $filename = Str::random(20) . '_' . time() . '.' . $file->getClientOriginalExtension();
+    $path = $file->storeAs('uploads', $filename, 'public');
+
+    return response()->json([
+        'success' => true,
+        'url' => Storage::disk('public')->url($path),
+        'path' => $path,
+    ]);
+}
 }

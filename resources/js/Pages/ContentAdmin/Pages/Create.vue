@@ -742,6 +742,7 @@ const uploadImage = async (file) => {
   const response = await axios.post('/upload-image', formData, {
     headers: {
       'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+      // NE stavljaj Content-Type
     },
   })
 
