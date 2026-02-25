@@ -34,12 +34,13 @@
             </p>
 
             <button
-              type="button"
-              @click="copyUrl"
-              :class="`mt-5 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${theme.btn}`"
-            >
-              Copy URL
-            </button>
+  v-if="canCopyUrl"
+  type="button"
+  @click="copyUrl"
+  :class="`mt-5 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${theme.btn}`"
+>
+  Copy URL
+</button>
           </div>
         </div>
       </section>
@@ -402,4 +403,9 @@ const copyUrl = () => {
       toastTimeout = setTimeout(() => (showToast.value = false), 2000)
     })
 }
+
+const canCopyUrl = computed(() => {
+  const role = page.props?.auth?.user?.role
+  return role === 'super_admin' || role === 'content_admin'
+})
 </script>

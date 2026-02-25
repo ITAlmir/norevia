@@ -16,11 +16,13 @@
           </div>
 
           <button
-            @click="copyUrl"
-            class="px-5 py-2.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
-          >
-            Copy URL
-          </button>
+  v-if="canCopyUrl"
+  type="button"
+  @click="copyUrl"
+  :class="`mt-5 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${theme.btn}`"
+>
+  Copy URL
+</button>
         </div>
       </div>
 
@@ -85,6 +87,9 @@
 <script setup>
 import MainLayout from '@/Layouts/MainLayout.vue'
 import { ref } from 'vue'
+import { usePage } from '@inertiajs/vue3'
+
+const page = usePage()
 
 const props = defineProps({
   page: Object,
@@ -135,6 +140,11 @@ function nl2brSafe(text) {
     .replace(/\r/g, '\n')
     .replace(/\n/g, '<br>')
 }
+
+const canCopyUrl = computed(() => {
+  const role = page.props?.auth?.user?.role
+  return role === 'super_admin' || role === 'content_admin'
+})
 </script>
 <style scoped>
 /* Važi za content koji dolazi kroz v-html */
