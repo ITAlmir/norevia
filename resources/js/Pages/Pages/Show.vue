@@ -58,12 +58,13 @@
           </div>
 
           <button
-            type="button"
-            @click="copyUrl"
-            :class="`px-5 py-2.5 rounded-xl font-medium transition-colors ${theme.btn}`"
-          >
-            Copy URL
-          </button>
+  v-if="canCopy"
+  type="button"
+  @click="copyUrl"
+  :class="`mt-5 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${theme.btn}`"
+>
+  Copy URL
+</button>
         </div>
       </header>
 
