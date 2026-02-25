@@ -217,7 +217,7 @@ class PageController extends Controller
             'page_type' => 'required|in:news,gaming,horoscope,post',
             'layout' => 'required|in:minimal,classic,magazine,hero',
 
-            'featured_image' => 'nullable|url|max:500',
+            'featured_image' => 'nullable|url',
             'image_caption' => 'nullable|string|max:255',
 
             'blocks' => 'nullable|array',
