@@ -303,7 +303,7 @@ $validated['content'] = $this->blocksToContent($blocks);
             'blocks.*.title'   => 'nullable|string|max:120',
             'blocks.*.text'    => 'nullable|string|max:500',
             'blocks.*.label'   => 'nullable|string|max:40',
-            'blocks.*.url'     => 'nullable|string|max:2048',
+            'blocks.*.url'     => 'nullable|string|max:51200',
             'blocks.*.variant' => 'nullable|string|in:primary,secondary,outline',
             'blocks.*.note'    => 'nullable|string|max:120',
 
