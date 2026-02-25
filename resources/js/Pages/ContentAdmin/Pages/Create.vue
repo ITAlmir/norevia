@@ -619,15 +619,16 @@ const handleBlockImageUpload = async (event, i) => {
     form.blocks[i].src = e.target.result
 
     try {
-      const url = await uploadImage(file)   // <-- DIREKTNO FILE
+      const url = await uploadImage(file)   // <-- BITNO
       form.blocks[i].src = url
     } catch (err) {
-      console.error(err)
-      alert('Upload failed, ostaje preview dok ne promijeniš.')
+      console.error(err?.response?.data || err)
+      alert('Upload failed, ostaje preview.')
     } finally {
       event.target.value = ''
     }
   }
+
   reader.readAsDataURL(file)
 }
 
@@ -651,8 +652,8 @@ const handleImageUpload = (event) => {
   const file = event.target.files[0]
   if (!file) return
 
-  if (file.size > 2 * 1024 * 1024) {
-    alert('File size must be less than 2MB')
+  if (file.size > 150 * 1024 * 1024) {
+    alert('File size must be less than 150MB')
     return
   }
 
@@ -742,7 +743,7 @@ const uploadImage = async (file) => {
   const response = await axios.post('/upload-image', formData, {
     headers: {
       'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-      // NE stavljaj Content-Type
+      'Accept': 'application/json',
     },
   })
 

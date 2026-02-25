@@ -844,8 +844,8 @@ const handleImageUpload = (event) => {
   const file = event.target.files[0]
   if (!file) return
   
-  if (file.size > 2 * 1024 * 1024) {
-    showNotification('File size must be less than 2MB', 'error')
+  if (file.size > 150 * 1024 * 1024) {
+    showNotification('File size must be less than 150MB', 'error')
     return
   }
   
