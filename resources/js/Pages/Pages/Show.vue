@@ -55,7 +55,7 @@
   @click="copyUrl"
   :class="`mt-5 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${theme.btn}`"
 >
-  Copy URL
+  Copy URL v999
 </button>
         </div>
       </header>
@@ -242,8 +242,6 @@ import ContentBlocks from '../../Components/ContentBlocks.vue'
 import { usePage,  Link} from '@inertiajs/vue3'
 
 const inertia = usePage()
-
-const inertiaPage = usePage()
 
 const props = defineProps({
   page: Object,
