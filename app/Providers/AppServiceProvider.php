@@ -10,6 +10,7 @@ use Inertia\Inertia;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\URL;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -21,8 +22,8 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         if (app()->environment('production')) {
-    URL::forceScheme('https');
-}
+            URL::forceScheme('https');
+            }
         // ✅ SQLite stability (WAL + timeout)
         if (config('database.default') === 'sqlite') {
            // DB::statement('PRAGMA journal_mode = WAL;');
