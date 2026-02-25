@@ -24,7 +24,7 @@
             <h1 :class="`text-slate-900 dark:text-white ${theme.titleHero}`">{{ page.title }}</h1>
 
             <div :class="`mt-3 text-sm flex flex-wrap gap-x-3 gap-y-1 ${theme.metaHero}`">
-              <span v-if="page.author?.name">By {{ page.author.name }}</span>
+              <span v-if="page.author?.name">By Norevia Team</span>
               <span v-if="page.published_at">• {{ formatDate(page.published_at) }}</span>
               <span v-if="typeof page.views !== 'undefined'">• {{ page.views }} views</span>
             </div>
