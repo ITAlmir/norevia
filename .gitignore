@@ -29,3 +29,7 @@ Thumbs.db
 /storage/framework/testing/*
 /storage/logs/*
 storage_app_public.prod.bak/
+!/public/
+!/public/favicon.ico
+!/public/favicon-dark.png
+!/public/favicon-light.png
