@@ -1,9 +1,25 @@
 <template>
   <MainLayout>
-    <div class="max-w-7xl mx-auto px-4 py-8">
-<h1 class="text-3xl font-bold ui-page-title mb-2">Dashboard</h1>
-      <p class="text-xl font-bold ui-page-title mb-2">Welcome back, {{ $page.props.auth.user.name }}!</p>
-    </div>
+      <div class="flex items-center gap-6">
+<div class="p-2 rounded-2xl 
+            inline-block">
+  <img src="/images/creator.png" class="h-24 w-auto" />
+</div>
+  <!-- ICON BLOCK -->
+  
+
+  <!-- TEXT BLOCK -->
+  <div>
+    <h1 class="text-3xl md:text-4xl font-bold ui-page-title mb-1">
+      Dashboard
+    </h1>
+
+    <p class="text-lg md:text-xl font-semibold text-slate-600 dark:text-slate-300">
+      Welcome back, {{ $page.props.auth.user.name }}!
+    </p>
+  </div>
+
+</div>
  
 
 <!-- Stats -->

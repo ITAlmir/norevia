@@ -100,19 +100,9 @@
             </div>
           </div>
         </template>
-        <!-- MOBILE MENU BUTTON -->
-<button
-  @click="mobileOpen = !mobileOpen"
-  class="md:hidden p-2 rounded-lg border
-         bg-slate-200 border-slate-300 text-slate-700
-         dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200"
->
-  <span v-if="!mobileOpen">☰</span>
-  <span v-else>✕</span>
-</button>
 
         <!-- AUTH LINKS -->
-        <div class="flex items-center gap-4 shrink-0">
+        <div class="hidden md:flex items-center gap-4 shrink-0">
           <template v-if="auth.user?.role === 'super_admin'">
             <Link href="/super-admin" class="text-sm text-red-800 hover:text-red-700">
               Super Admin
@@ -167,20 +157,93 @@
 
       </div>
     </nav>
-    <!-- MOBILE NAV -->
-<div v-if="mobileOpen"
-     class="md:hidden border-b border-slate-300 dark:border-slate-700
-            bg-slate-100 dark:bg-slate-900">
+            <!-- MOBILE MENU BUTTON -->
+<button
+  @click="mobileOpen = !mobileOpen"
+  class="md:hidden ml-[80%] p-3 rounded-xl border
+         transition-all duration-200 active:scale-95
+         backdrop-blur-sm"
+  :class="mobileOpen
+    ? 'bg-slate-600/90 border-red-700 text-white hover:bg-red-700 hover:shadow-[0_15px_40px_-20px_rgba(220,38,38,0.8)]'
+    : 'bg-slate-600/90 border-emerald-800 text-white hover:bg-emerald-800 hover:shadow-[0_15px_40px_-20px_rgba(16,185,129,0.8)]'"
+>
+  <span
+    class="text-sm font-extrabold tracking-wide flex items-center gap-2 transition-all duration-200"
+    :class="mobileOpen ? 'scale-105' : ''"
+  >
+    <span v-if="!mobileOpen">☰</span>
+    <span v-else>✕</span>
 
-  <div class="flex flex-col px-6 py-4 space-y-3 text-sm font-medium">
-    <Link href="/" @click="mobileOpen=false">HOME</Link>
-    <Link href="/gaming" @click="mobileOpen=false">GAMING</Link>
-    <Link href="/tools" @click="mobileOpen=false">TOOLS</Link>
-    <Link href="/apps" @click="mobileOpen=false">APPS</Link>
+    {{ mobileOpen ? 'Close' : 'Menu' }}
+  </span>
+</button>
+<!-- MOBILE NAV -->
+<div
+  v-if="mobileOpen"
+  class="md:hidden border-b border-slate-300 dark:border-slate-700
+         bg-slate-100 dark:bg-slate-900"
+>
+  <div class="px-6 py-5 space-y-2">
+    <!-- MAIN LINKS -->
+    <Link
+      href="/"
+      @click="mobileOpen=false"
+      class="block px-4 py-3 rounded-xl text-base font-extrabold tracking-wide transition text-center
+             text-blue-800 hover:text-blue-900 hover:bg-white/70
+             dark:text-blue-300 dark:hover:text-blue-200 dark:hover:bg-white/5"
+    >
+      HOME
+    </Link>
 
-    <div class="pt-3 border-t border-slate-300 dark:border-slate-700">
-      <Link v-if="canLogin" href="/login" @click="mobileOpen=false">Login</Link>
-      <Link v-if="canRegister" href="/register" @click="mobileOpen=false">Register</Link>
+    <Link
+      href="/downloads"
+      @click="mobileOpen=false"
+      class="block px-4 py-3 rounded-xl text-base font-extrabold tracking-wide transition text-center
+             text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50
+             dark:text-emerald-300 dark:hover:text-emerald-200 dark:hover:bg-emerald-500/10"
+    >
+      DOWNLOADS
+    </Link>
+
+    <Link
+      href="/blog"
+      @click="mobileOpen=false"
+      class="block px-4 py-3 rounded-xl text-base font-extrabold tracking-wide transition text-center
+             text-fuchsia-700 hover:text-fuchsia-800 hover:bg-fuchsia-50
+             dark:text-fuchsia-300 dark:hover:text-fuchsia-200 dark:hover:bg-fuchsia-500/10"
+    >
+      BLOG
+    </Link>
+
+    <!-- AUTH AREA -->
+    <div class="pt-4 mt-4 border-t border-slate-300/70 dark:border-slate-700/70 space-y-2">
+      <Link
+        v-if="canLogin"
+        href="/login"
+        @click="mobileOpen=false"
+        class="block px-4 py-3 rounded-xl text-base font-extrabold transition text-center
+               bg-cyan-600 text-white
+               hover:bg-cyan-700
+               shadow-[0_18px_45px_-30px_rgba(16,185,129,0.85)]
+               hover:-translate-y-[1px] hover:shadow-[0_26px_70px_-40px_rgba(16,185,129,0.95)]
+               active:translate-y-0"
+      >
+        Log in
+      </Link>
+
+      <Link
+        v-if="canRegister"
+        href="/register"
+        @click="mobileOpen=false"
+        class="block px-4 py-3 rounded-xl text-base font-extrabold transition text-center
+               bg-emerald-600 text-white
+               hover:bg-emerald-700
+               shadow-[0_18px_45px_-30px_rgba(16,185,129,0.85)]
+               hover:-translate-y-[1px] hover:shadow-[0_26px_70px_-40px_rgba(16,185,129,0.95)]
+               active:translate-y-0"
+      >
+        Register
+      </Link>
     </div>
   </div>
 </div>
