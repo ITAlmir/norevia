@@ -13,8 +13,12 @@
 
       <div class="max-w-7xl mx-auto px-6 py-4 flex items-center gap-6">
         <!-- LOGO -->
-        <Link href="/" class="text-xl font-bold tracking-widest text-blue-800 dark:text-blue-400 shrink-0">
-  Nor<span class="text-red-700 dark:text-red-400">EVIA</span>
+        <Link href="/" class="shrink-0 flex items-center">
+  <img
+    src="/images/logo-norevia.png"
+    alt="Norevia"
+    class="h-10 w-auto object-contain"
+  />
 </Link>
 
 

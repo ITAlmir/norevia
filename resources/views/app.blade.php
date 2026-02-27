@@ -11,6 +11,10 @@
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
 
+        <!-- Light mode favicon -->
+        <link rel="icon" type="image/png" href="/favicon-light.png" media="(prefers-color-scheme: light)">
+        <!-- Dark mode favicon -->
+        <link rel="icon" type="image/png" href="/favicon-dark.png" media="(prefers-color-scheme: dark)">
         <!-- Scripts -->
         @routes
         @vite(['resources/js/app.js'])
