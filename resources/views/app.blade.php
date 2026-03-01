@@ -15,6 +15,13 @@
         <link rel="icon" type="image/png" href="/favicon-light.png" media="(prefers-color-scheme: light)">
         <!-- Dark mode favicon -->
         <link rel="icon" type="image/png" href="/favicon-dark.png" media="(prefers-color-scheme: dark)">
+
+        <!-- ✅ AdSense -->
+        <script async
+            src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4474320596321568"
+            crossorigin="anonymous">
+        </script>
+
         <!-- Scripts -->
         @routes
         @vite(['resources/js/app.js'])

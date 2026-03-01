@@ -33,3 +33,4 @@ storage_app_public.prod.bak/
 !/public/favicon.ico
 !/public/favicon-dark.png
 !/public/favicon-light.png
+!public/**

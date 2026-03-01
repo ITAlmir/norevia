@@ -239,6 +239,14 @@
       >
         + Image
       </button>
+
+      <button
+  type="button"
+  @click="addAdBlock"
+  class="px-3 py-2 rounded-lg text-sm font-medium bg-amber-600/90 hover:bg-amber-600 text-white"
+>
+  + Ad
+</button>
     </div>
   </div>
 
@@ -402,7 +410,76 @@
     </div>
   </div>
 </div>
+  <!-- AD / BANNER BLOCK -->
+<div v-else-if="block.type === 'ad'" class="space-y-3">
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+    <div>
+      <label class="block text-xs text-gray-400 mb-1">Kind</label>
+      <select
+        v-model="block.kind"
+        class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-gray-300"
+      >
+        <option value="adsense">AdSense</option>
+        <option value="affiliate">Affiliate</option>
+        <option value="html">Custom HTML</option>
+      </select>
+    </div>
 
+    <div>
+      <label class="block text-xs text-gray-400 mb-1">Label (optional)</label>
+      <input
+        v-model="block.note"
+        type="text"
+        class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-gray-300"
+        placeholder="Sponsored"
+      />
+    </div>
+  </div>
+
+  <!-- AdSense slot -->
+  <div v-if="block.kind === 'adsense'">
+    <label class="block text-xs text-gray-400 mb-1">AdSense slot ID *</label>
+    <input
+      v-model="block.adsense_slot"
+      type="text"
+      class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-gray-300"
+      placeholder="e.g. 1234567890"
+    />
+    <p class="text-xs text-slate-500 mt-1">
+      Slot ID from AdSense. Client ID is global (in layout).
+    </p>
+  </div>
+
+  <!-- Affiliate / HTML -->
+  <div v-else>
+    <label class="block text-xs text-gray-400 mb-1">
+      Paste banner HTML (img/link/iframe)
+    </label>
+    <textarea
+      v-model="block.html"
+      rows="5"
+      class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-gray-300"
+      placeholder='<a href="https://..." target="_blank" rel="nofollow noopener"><img src="..." /></a>'
+    />
+    <p class="text-xs text-slate-500 mt-1">
+      Tip: For affiliates prefer image+link. Avoid scripts here.
+    </p>
+  </div>
+
+  <!-- Preview box -->
+  <div class="pt-3 border-t border-slate-700">
+    <div class="text-xs text-slate-400 mb-2">Preview</div>
+    <div class="rounded-xl border border-slate-700 bg-slate-900/40 p-4">
+      <div v-if="block.note" class="text-xs text-slate-400 mb-2">{{ block.note }}</div>
+      <div v-if="block.kind === 'adsense'" class="text-slate-300 text-sm">
+        AdSense slot: <span class="font-semibold text-white">{{ block.adsense_slot || '—' }}</span>
+      </div>
+      <div v-else class="text-slate-300 text-sm break-words">
+        HTML banner will render on public page.
+      </div>
+    </div>
+  </div>
+</div>
       <!-- IMAGE BLOCK -->
       <div v-else-if="block.type === 'image'" class="space-y-3">
         <div v-if="block.src" class="mb-2">
@@ -410,7 +487,7 @@
         </div>
 
         <div class="border-2 border-dashed border-slate-700 rounded-lg p-4 text-center">
-          <p class="text-gray-400 mb-2 text-sm">Upload image (max 2MB)</p>
+          <p class="text-gray-400 mb-2 text-sm">Upload image (max 50MB)</p>
 
           <input
             type="file"
@@ -1054,6 +1131,14 @@ const insertHashtag = (blockIndex) => {
   if (!tag) return
   form.blocks[blockIndex].content = (form.blocks[blockIndex].content || '') + ` #${tag}`
 }
+
+const addAdBlock = () => form.blocks.push({
+  type: 'ad',
+  kind: 'affiliate', // adsense | affiliate | html
+  note: 'Sponsored', // optional
+  adsense_slot: '',  // only for adsense
+  html: '',          // for affiliate/html
+})
 </script>
 
 <style scoped>

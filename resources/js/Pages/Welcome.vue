@@ -322,11 +322,12 @@
             >
               <span class="relative z-10">Open dashboard →</span>
               <span
-                class="absolute inset-0 rounded-xl opacity-0
-                       bg-gradient-to-r from-white/12 via-white/6 to-transparent
-                       transition-opacity duration-200
-                       group-hover:opacity-100"
-              ></span>
+  class="absolute inset-0 rounded-xl opacity-0 pointer-events-none
+         bg-gradient-to-r from-white/10 via-white/5 to-transparent
+         dark:from-white/12 dark:via-white/6
+         transition-opacity duration-200
+         group-hover:opacity-60 dark:group-hover:opacity-100"
+></span>
             </Link>
 
             <!-- SECONDARY -->
@@ -507,11 +508,12 @@
             >
               <span class="relative z-10">View all tools →</span>
               <span
-                class="absolute inset-0 rounded-xl opacity-0
-                       bg-gradient-to-r from-white/12 via-white/6 to-transparent
-                       transition-opacity duration-200
-                       group-hover:opacity-100"
-              ></span>
+  class="absolute inset-0 rounded-xl opacity-0 pointer-events-none
+         bg-gradient-to-r from-white/10 via-white/5 to-transparent
+         dark:from-white/12 dark:via-white/6
+         transition-opacity duration-200
+         group-hover:opacity-60 dark:group-hover:opacity-100"
+></span>
             </Link>
 
             <!-- SECONDARY -->

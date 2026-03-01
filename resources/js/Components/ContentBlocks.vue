@@ -1,14 +1,44 @@
 <script setup>
+import { computed, onMounted, watch, nextTick } from 'vue'
+
 const props = defineProps({
   blocks: { type: Array, default: () => [] },
   content: { type: String, default: '' },
-
-  // styling hooks (optional)
   cardClass: { type: String, default: '' },
   proseClass: { type: String, default: '' },
 })
 
-const hasBlocks = () => Array.isArray(props.blocks) && props.blocks.length > 0
+const blocksSafe = computed(() => Array.isArray(props.blocks) ? props.blocks : [])
+
+const hasBlocks = () => blocksSafe.value.length > 0
+
+const hasAdsense = computed(() =>
+  blocksSafe.value.some(b => b?.type === 'ad' && b?.kind === 'adsense' && b?.adsense_slot)
+)
+
+function renderAdsenseSafely() {
+  if (typeof window === 'undefined') return
+  if (!hasAdsense.value) return
+
+  // adsbygoogle.js mora već biti učitan globalno
+  if (!window.adsbygoogle) return
+
+  try {
+    window.adsbygoogle.push({})
+  } catch (e) {
+    // AdSense zna baciti error ako se zove više puta; ignorišemo
+  }
+}
+
+onMounted(async () => {
+  await nextTick()
+  renderAdsenseSafely()
+})
+
+watch(blocksSafe, async () => {
+  await nextTick()
+  renderAdsenseSafely()
+}, { deep: true })
 
 function escapeHtml(s) {
   return String(s ?? '')
@@ -152,6 +182,38 @@ function ctaClass(variant = 'primary') {
           v-html="formatTextSafe(b.caption)"
         ></figcaption>
       </figure>
+
+      <!-- AD / BANNER BLOCK -->
+<div
+  v-else-if="b.type === 'ad'"
+  :class="[
+    'rounded-2xl border p-5',
+    'border-slate-200 bg-white/90 text-slate-900',
+    'dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-100',
+    cardClass
+  ]"
+>
+  <div v-if="b.note" class="text-xs text-slate-600 dark:text-slate-400 mb-3">
+    {{ b.note }}
+  </div>
+
+  <!-- AdSense -->
+  <div v-if="b.kind === 'adsense' && b.adsense_slot" class="overflow-hidden">
+    <ins
+      class="adsbygoogle"
+      style="display:block"
+      data-ad-client="ca-pub-4474320596321568"
+      :data-ad-slot="b.adsense_slot"
+      data-ad-format="auto"
+      data-full-width-responsive="true"
+    ></ins>
+  </div>
+
+  <!-- Affiliate / HTML -->
+  <div v-else-if="b.html" class="prose max-w-none dark:prose-invert" v-html="b.html"></div>
+
+  <div v-else class="text-sm text-slate-500">Ad block not configured.</div>
+</div>
 
       <!-- UNKNOWN -->
       <div v-else class="text-sm text-slate-500">

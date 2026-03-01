@@ -51,8 +51,8 @@ class PageController extends Controller
     foreach ($blocks as $b) {
         $type = $b['type'] ?? null;
 
-        // ✅ dodaj cta
-        if (!in_array($type, ['text', 'image', 'cta'], true)) continue;
+        // ✅ DODAJEMO AD I CTA
+        if (!in_array($type, ['text', 'image', 'cta', 'ad'], true)) continue;
 
         if ($type === 'text') {
             $content = (string)($b['content'] ?? '');
@@ -109,6 +109,35 @@ class PageController extends Controller
                 'note'    => trim((string)($b['note'] ?? '')),
             ];
         }
+
+        // ✅ AD block (adsense/affiliate/html)
+if ($type === 'ad') {
+    $kind = (string)($b['kind'] ?? 'adsense');
+    if (!in_array($kind, ['adsense','affiliate','html'], true)) $kind = 'adsense';
+
+    $note = trim((string)($b['note'] ?? ''));
+
+    if ($kind === 'adsense') {
+        $slot = trim((string)($b['adsense_slot'] ?? ''));
+        if ($slot === '') continue; // slot je obavezan za adsense
+        $out[] = [
+            'type' => 'ad',
+            'kind' => 'adsense',
+            'note' => $note,
+            'adsense_slot' => $slot,
+        ];
+    } else {
+        $html = trim((string)($b['html'] ?? ''));
+        if ($html === '') continue; // html obavezan za affiliate/html
+        $out[] = [
+            'type' => 'ad',
+            'kind' => $kind,
+            'note' => $note,
+            'html' => $html,
+        ];
+    }
+}        
+
     }
 
     return $out;
@@ -221,7 +250,7 @@ class PageController extends Controller
             'image_caption' => 'nullable|string|max:255',
 
             'blocks' => 'nullable|array',
-            'blocks.*.type' => 'required_with:blocks|string|in:text,image,cta',
+            'blocks.*.type' => 'required_with:blocks|string|in:text,image,cta,ad',
             'blocks.*.content' => 'nullable|string',
             'blocks.*.src' => 'nullable|string|max:500000',
             'blocks.*.caption' => 'nullable|string|max:255',
@@ -231,6 +260,9 @@ class PageController extends Controller
             'blocks.*.url'     => 'nullable|string|max:2048',
             'blocks.*.variant' => 'nullable|string|in:primary,secondary,outline',
             'blocks.*.note'    => 'nullable|string|max:120',
+            'blocks.*.kind'        => 'nullable|string|in:adsense,affiliate,html',
+            'blocks.*.adsense_slot'=> 'nullable|string|max:64',
+            'blocks.*.html'        => 'nullable|string|max:200000',
 
             'meta_title' => 'nullable|string|max:255',
             'meta_description' => 'nullable|string|max:500',
@@ -296,7 +328,7 @@ $validated['content'] = $this->blocksToContent($blocks);
             'image_caption' => 'nullable|string|max:255',
 
             'blocks' => 'nullable|array',
-            'blocks.*.type' => 'required_with:blocks|string|in:text,image,cta',
+            'blocks.*.type' => 'required_with:blocks|string|in:text,image,cta,ad',
             'blocks.*.content' => 'nullable|string',
             'blocks.*.src' => 'nullable|string|max:500000',
             'blocks.*.caption' => 'nullable|string|max:255',
@@ -306,6 +338,9 @@ $validated['content'] = $this->blocksToContent($blocks);
             'blocks.*.url'     => 'nullable|string|max:51200',
             'blocks.*.variant' => 'nullable|string|in:primary,secondary,outline',
             'blocks.*.note'    => 'nullable|string|max:120',
+            'blocks.*.kind'        => 'nullable|string|in:adsense,affiliate,html',
+            'blocks.*.adsense_slot'=> 'nullable|string|max:64',
+            'blocks.*.html'        => 'nullable|string|max:200000', // dovoljno za iframe/banner html
 
             'meta_title' => 'nullable|string|max:255',
             'meta_description' => 'nullable|string|max:500',

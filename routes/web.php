@@ -29,11 +29,19 @@ use App\Http\Controllers\PublicPageController;
 // --------------------
 // Public routes... blog rute moraju biti na vrhu
 // --------------------
-   Route::get('/demo', fn () => Inertia::render('Demo/Index'))->name('demo');
+    Route::get('/demo', fn () => Inertia::render('Demo/Index'))->name('demo');
 
     Route::get('/blog', [BlogController::class, 'index'])->name('blog.index');
     Route::get('/blog/{topic}', [BlogController::class, 'topic'])->name('blog.topic');
     Route::get('/blog/{topic}/{slug}', [BlogController::class, 'show'])->name('blog.show');
+
+
+
+    Route::get('/pages/about', fn () => Inertia::render('Pages/About'))->name('pages.about');
+    Route::get('/pages/contact', fn () => Inertia::render('Pages/Contact'))->name('pages.contact');
+    Route::get('/pages/support', fn () => Inertia::render('Pages/Support'))->name('pages.support');
+    Route::get('/pages/privacy', fn () => Inertia::render('Pages/Privacy'))->name('pages.privacy');
+    Route::get('/pages/terms', fn () => Inertia::render('Pages/Terms'))->name('pages.terms');
 
     // Upload image (auth already applied by group)
     Route::post('/upload-image', [ImageUploadController::class, 'store']);

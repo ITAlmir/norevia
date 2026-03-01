@@ -154,6 +154,13 @@
     <h3 class="text-lg font-semibold text-gray-100">Content blocks</h3>
     <div class="flex gap-2">
       <button
+  type="button"
+  @click="addAdBlock"
+  class="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-gray-200 rounded-lg text-sm"
+>
+  + Ad / Banner
+</button>
+      <button
         type="button"
         @click="addTextBlock"
         class="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-gray-200 rounded-lg text-sm"
@@ -421,6 +428,47 @@
       </div>
 
       <div v-if="block.note" class="mt-2 text-xs text-slate-400">{{ block.note }}</div>
+    </div>
+  </div>
+</div>
+<!-- AD / BANNER BLOCK -->
+<div v-else-if="block.type === 'ad'" class="space-y-3">
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+    <div>
+      <label class="block text-xs text-gray-400 mb-1">Kind</label>
+      <select v-model="block.kind" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-gray-300">
+        <option value="adsense">AdSense</option>
+        <option value="affiliate">Affiliate</option>
+        <option value="html">Custom HTML</option>
+      </select>
+    </div>
+
+    <div>
+      <label class="block text-xs text-gray-400 mb-1">Label (optional)</label>
+      <input v-model="block.note" type="text" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-gray-300" placeholder="Sponsored" />
+    </div>
+  </div>
+
+  <div v-if="block.kind === 'adsense'">
+    <label class="block text-xs text-gray-400 mb-1">AdSense Slot ID *</label>
+    <input v-model="block.adsense_slot" type="text" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-gray-300" placeholder="1234567890" />
+  </div>
+
+  <div v-else>
+    <label class="block text-xs text-gray-400 mb-1">Banner HTML</label>
+    <textarea v-model="block.html" rows="5" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-gray-300"
+      placeholder='<a href="https://..." target="_blank" rel="nofollow noopener"><img src="..." /></a>' />
+  </div>
+
+  <div class="pt-3 border-t border-slate-700">
+    <div class="text-xs text-slate-400 mb-2">Preview</div>
+    <div class="rounded-xl border border-slate-700 bg-slate-900/40 p-4">
+      <div v-if="block.kind === 'adsense'" class="text-slate-300 text-sm">
+        AdSense slot: <span class="font-semibold text-white">{{ block.adsense_slot || '—' }}</span>
+      </div>
+      <div v-else class="text-slate-300 text-sm">
+        HTML banner will render on public page.
+      </div>
     </div>
   </div>
 </div>
@@ -849,5 +897,16 @@ const textAreaRefs = ref({})
 
 const setTextAreaRef = (el, i) => {
   if (el) textAreaRefs.value[i] = el
+}
+
+const addAdBlock = () => {
+  ensureBlocksArray()
+  form.blocks.push({
+    type: 'ad',
+    kind: 'affiliate', // adsense | affiliate | html
+    note: 'Sponsored',
+    adsense_slot: '',
+    html: '',
+  })
 }
 </script>
