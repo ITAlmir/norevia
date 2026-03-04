@@ -3,7 +3,8 @@
   <div class="min-h-screen
             bg-gradient-to-b from-slate-200 via-slate-100 to-slate-200
             text-slate-900
-            dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 dark:text-gray-100">
+            dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 dark:text-gray-100
+            overflow-x-hidden">
 
     <SeoHead />
     <!-- NAVBAR -->
@@ -11,8 +12,8 @@
             dark:bg-slate-900/80 dark:border-slate-700">
 
 
-      <div class="max-w-7xl mx-auto px-6 py-4 flex items-center gap-6">
-        <!-- LOGO -->
+<div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center gap-3">
+          <!-- LOGO -->
         <Link href="/" class="shrink-0 flex items-center">
   <img
     src="/images/logo-norevia.png"
@@ -41,7 +42,7 @@
 
 
           <!-- SEARCH BAR (site) -->
-          <div class="w-56 relative shrink-0">
+          <div class="relative w-full md:w-56 md:shrink-0 min-w-0">
             <input
   v-model="searchQuery"
   type="text"
@@ -164,7 +165,7 @@
             <!-- MOBILE MENU BUTTON -->
 <button
   @click="mobileOpen = !mobileOpen"
-  class="md:hidden ml-[80%] p-3 rounded-xl border
+  class="md:hidden ml-[70%] p-3 rounded-xl border
          transition-all duration-200 active:scale-95
          backdrop-blur-sm"
   :class="mobileOpen
