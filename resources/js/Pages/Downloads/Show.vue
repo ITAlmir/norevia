@@ -159,27 +159,11 @@ function toBullets(block) {
                     bg-gradient-to-br from-fuchsia-200 via-amber-200 to-rose-200
                     dark:from-fuchsia-900/25 dark:via-amber-900/20 dark:to-rose-900/20" />
       </div>
-
       <!-- TOP AD / BANNER container -->
-      <div class="relative rounded-2xl p-[1px] mb-6
-                  bg-gradient-to-r from-slate-200 via-white to-slate-200
-                  dark:from-slate-800 dark:via-slate-900/40 dark:to-slate-800
-                  shadow-[0_16px_50px_-28px_rgba(2,6,23,0.45)]">
-        <div class="rounded-2xl p-5
-                    bg-white/80 backdrop-blur
-                    dark:bg-slate-950/40
-                    border border-white/60 dark:border-slate-800/70">
-          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div>              
+                         
               <div class="mt-6">
   <AdSense ad-slot="6645163613" />
 </div>
-            </div>
-            
-          </div>
-        </div>
-      </div>
-
       <!-- HERO CARD -->
       <div
         class="relative rounded-3xl p-[1px]
