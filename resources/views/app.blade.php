@@ -19,10 +19,10 @@
         <!-- ✅ AdSense -->
         <script async
             src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4474320596321568"
-            crossorigin="anonymous">
+            crossorigin="anonymous"></script>
 
             <script src="https://www.paypal.com/sdk/js?client-id=BAAAWeutS2INp1MoL1X11M2BHymlpZc5lwW9F7twrobsHVijVuY88PgKCRqfEicQDZgpWV1E_bk94iwaxg&components=hosted-buttons&disable-funding=venmo&currency=EUR"></script>
-        </script>
+        
         @routes
         @vite(['resources/js/app.js'])
     </head>
