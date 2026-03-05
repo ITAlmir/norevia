@@ -319,13 +319,6 @@ function loadScriptOnce(src) {
   })
 }
 
-const PAYPAL_SDK_SRC =
-  'https://www.paypal.com/sdk/js?client-id=BAAAWeutS2INp1MoL1X11M2BHymlpZc5lwW9F7twrobsHVijVuY88PgKCRqfEicQDZgpWV1E_bk94iwaxg&components=hosted-buttons&disable-funding=venmo&currency=EUR'
-
-onMounted(async () => {
-  await loadScriptOnce(PAYPAL_SDK_SRC)
-})
-
 
 const mobileOpen = ref(false)
 
