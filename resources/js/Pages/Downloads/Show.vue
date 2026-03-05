@@ -331,7 +331,7 @@ function toBullets(block) {
       </div>
 
         <!-- ✅ PRIME / LICENSE PANEL (only for cs2-performance-system) -->
-<div v-if="showPayPal" class="mt-6">
+<div v-if="showPayPal" id="buy" class="mt-6">
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
     <!-- left: benefits -->
     <div class="lg:col-span-2 rounded-2xl p-5 border
@@ -353,18 +353,16 @@ function toBullets(block) {
         </div>
       </div>
       <div class="mt-1 flex justify-center">
-  
-  <img
-    src="/images/prime-key-light.png"
-    alt="Prime License Key"
-    class="block dark:hidden h-56 object-contain opacity-95"
-  />
-
-  <img
-    src="/images/prime-key-dark.png"
-    alt="Prime License Key"
-    class="hidden dark:block h-56 object-contain opacity-95"
-  />
+  <picture>
+    <source srcset="/images/prime-key-dark.png" media="(prefers-color-scheme: dark)" />
+    <img
+      src="/images/prime-key-light.png"
+      alt="Prime License Key"
+      class="h-56 object-contain opacity-95"
+      loading="eager"
+      decoding="async"
+    />
+  </picture>
 </div>
 <div class="text-xs text-center text-slate-500 dark:text-slate-400 mt-2">
   Secure activation key • Instant unlock after purchase
@@ -404,6 +402,16 @@ function toBullets(block) {
 </div>
     </div>
   </div>
+  <section id="activate" style="margin-top:24px;">
+  <h2>How to activate PRIME</h2>
+  <ol>
+    <li>Buy a PRIME key below.</li>
+    <li>Open CS2 Performance System.</li>
+    <li>Go to <b>Support</b> or <b>Optimizer</b> tab.</li>
+    <li>Paste your key into <b>License Key</b> field and click <b>Activate</b>.</li>
+  </ol>
+  <p><b>Tip:</b> If “Fix Now” says Admin required, click <b>Restart as Admin</b> in the app header.</p>
+</section>
 </div>
       <!-- DETAILS SECTIONS (auto iz description) -->
 <div v-if="parsed.sections.length" class="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -455,7 +463,7 @@ function toBullets(block) {
            data-full-width-responsive="true"></ins>
     </div>
   </div>
-</div>
+</div>  
 
       <!-- RELATED -->
       <div v-if="related.length" class="mt-10">
@@ -510,7 +518,7 @@ function toBullets(block) {
           </Link>
         </div>
       </div>
-
+      
       <!-- back -->
       <div class="mt-8">
         <a href="/downloads" class="inline-flex items-center gap-2 text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white">

@@ -43,6 +43,10 @@ use App\Http\Controllers\PublicPageController;
     Route::get('/pages/privacy', fn () => Inertia::render('Pages/Privacy'))->name('pages.privacy');
     Route::get('/pages/terms', fn () => Inertia::render('Pages/Terms'))->name('pages.terms');
 
+Route::get('/thank-you', function () {
+    return Inertia::render('ThankYou');
+})->name('thank-you');
+
     // Upload image (auth already applied by group)
     Route::post('/upload-image', [ImageUploadController::class, 'store']);
 
