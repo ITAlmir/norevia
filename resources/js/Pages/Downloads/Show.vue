@@ -1,7 +1,7 @@
 <script setup>
 import MainLayout from '@/Layouts/MainLayout.vue'
 import { Link } from '@inertiajs/vue3' 
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, nextTick } from 'vue'
 import PayPalHostedButton from '@/Components/PayPalHostedButton.vue'
 
 onMounted(() => {
@@ -318,7 +318,7 @@ function toBullets(block) {
                 Clicking <span class="font-semibold text-slate-700 dark:text-slate-200">Download</span> opens the confirmation step.
               </div>
                <!-- PRIME overlays (absolute inside this relative box) -->
-  <div v-show="showPayPal" class="pointer-events-none z-30">
+  <div v-show="showPayPal" class="pointer-events-none z-30 pointer-events-none">
   <div class="inline-block text-xs font-medium px-3 py-1.5 rounded-full border
               border-amber-200 bg-amber-50 text-amber-800
               dark:border-amber-700/50 dark:bg-amber-900/20 dark:text-amber-200">
@@ -394,7 +394,7 @@ function toBullets(block) {
         Secure payment • You’ll be redirected after purchase.
       </div>
 
-      <div class="mt-4">
+      <div class="relative z-0 [isolation:isolate]">
   <PayPalHostedButton
     hostedButtonId="ZG7FZMEA4V9VE"
     containerId="paypal-container-prime"

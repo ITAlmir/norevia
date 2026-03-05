@@ -8,7 +8,7 @@
 
     <SeoHead />
     <!-- NAVBAR -->
-    <nav class="bg-slate-100/80 backdrop-blur border-b border-slate-300
+    <nav class="sticky top-0 relative z-[9999] bg-slate-100/80 backdrop-blur border-b border-slate-300
             dark:bg-slate-900/80 dark:border-slate-700">
 
 
@@ -415,3 +415,13 @@ const confirmLogout = () => {
   })
 }
 </script>
+<style>
+/* PayPal zna ubaciti overlay/iframe sa visokim z-index */
+iframe[name^="paypal"], 
+iframe[src*="paypal.com"],
+.paypal-buttons,
+.paypal-checkout-sandbox,
+.paypal-checkout-overlay {
+  z-index: 10 !important;
+}
+</style>

@@ -112,7 +112,7 @@
 
           <div class="mt-5 flex flex-wrap gap-2">
             <Link
-  href="/blog/cs2/cs2-performance-system"
+  href="/downloads/cs2-performance-system"
   class="group relative px-5 py-3 rounded-xl text-sm md:text-base
          font-extrabold text-white transition-all duration-200
          bg-[#ff2a55]
@@ -139,7 +139,7 @@
 </Link>
 
             <Link
-              href="/blog/cs2"
+              href="/blog/cs2/cs2-performance-system"
               class="px-5 py-3 rounded-xl text-sm md:text-base font-bold border transition
                      border-white/15 text-white/90 bg-white/5 hover:bg-white/10"
             >
@@ -151,7 +151,7 @@
         <!-- RIGHT: clickable “thumb” / card that links to model -->
         <div class="md:col-span-5">
           <Link
-  href="/blog/cs2/cs2-performance-system"
+  href="/downloads/cs2-performance-system"
   class="group/thumb relative block rounded-2xl border overflow-hidden
          border-white/10
          bg-gradient-to-br from-[#2b060d] via-black to-black
