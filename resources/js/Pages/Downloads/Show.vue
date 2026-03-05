@@ -1,7 +1,21 @@
 <script setup>
 import MainLayout from '@/Layouts/MainLayout.vue'
 import { Link } from '@inertiajs/vue3' 
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
+import PayPalHostedButton from '@/Components/PayPalHostedButton.vue'
+
+onMounted(() => {
+  setTimeout(() => {
+    try {
+      const ads = document.querySelectorAll('ins.adsbygoogle[data-norevia-ad="1"]')
+      ads.forEach((el) => {
+        if (el.dataset.loaded) return
+        ;(window.adsbygoogle = window.adsbygoogle || []).push({})
+        el.dataset.loaded = "1"
+      })
+    } catch (e) {}
+  }, 300)
+})
 
 const props = defineProps({
   item: { type: Object, required: true },
@@ -26,6 +40,7 @@ function thumb(x) {
 }
 
 const rawDesc = computed(() => (props.item?.description || '').trim())
+const showPayPal = computed(() => props.item?.slug === 'cs2-performance-system')
 
 function parseCta(text) {
   // format: [BUTTON: Label | https://...]
@@ -135,7 +150,7 @@ function toBullets(block) {
     .map(x => x.trim())
     .filter(Boolean)
 
-  const bulletLines = lines.filter(l => l.startsWith('•') || l.startsWith('-'))
+  const bulletLines = lines.filter(l => l.startsWith('•') || l.startsWith('-')) 
   if (bulletLines.length >= 2) {
     return bulletLines.map(l => l.replace(/^(\•|\-)\s*/, ''))
   }
@@ -171,13 +186,17 @@ function toBullets(block) {
               <div class="text-xs font-semibold text-slate-600 dark:text-slate-300">
                 Sponsored / Banner
               </div>
-              <div class="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                Placeholder container — later you can drop AdSense code here.
-              </div>
+              <div class="mt-6 flex justify-center">
+  <ins class="adsbygoogle"
+      data-norevia-ad="1"
+       style="display:block"
+       data-ad-client="ca-pub-4474320596321568"
+       data-ad-slot="6645163613"
+       data-ad-format="auto"
+       data-full-width-responsive="true"></ins>
+</div>
             </div>
-            <div class="text-xs text-slate-400 dark:text-slate-500">
-              728×90 or responsive
-            </div>
+            
           </div>
         </div>
       </div>
@@ -190,11 +209,11 @@ function toBullets(block) {
                shadow-[0_22px_70px_-38px_rgba(2,6,23,0.55)]"
       >
         <div
-          class="rounded-3xl p-6 md:p-8
-                 bg-white/85 backdrop-blur
-                 dark:bg-slate-950/45
-                 border border-white/70 dark:border-slate-800/70"
-        >
+  :class="[
+    'relative rounded-3xl p-6 md:p-8 bg-white/85 backdrop-blur dark:bg-slate-950/45 border border-white/70 dark:border-slate-800/70',
+    showPayPal ? 'pt-12 pb-12' : ''
+  ]"
+>
           <div class="flex flex-col md:flex-row md:items-start gap-6">
             <!-- THUMB -->
             <div
@@ -263,9 +282,8 @@ function toBullets(block) {
                   :href="`/downloads/${item.slug}/download`"
                 >
                   Download →
-                </a>
-              </div>
-
+                </a>                
+              </div>            
               <!-- META CHIPS -->
               <div class="mt-5 flex flex-wrap gap-2">
                 <span class="px-3 py-1 rounded-full text-sm border
@@ -294,16 +312,99 @@ function toBullets(block) {
               </div>
 
               <!-- subtle divider -->
-              <div class="mt-6 h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent dark:via-slate-800" />
-
+              <div class="mt-6 h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent dark:via-slate-800" />             
               <!-- mini note -->
               <div class="mt-4 text-sm text-slate-500 dark:text-slate-400">
                 Clicking <span class="font-semibold text-slate-700 dark:text-slate-200">Download</span> opens the confirmation step.
               </div>
+               <!-- PRIME overlays (absolute inside this relative box) -->
+  <div v-show="showPayPal" class="pointer-events-none z-30">
+  <div class="inline-block text-xs font-medium px-3 py-1.5 rounded-full border
+              border-amber-200 bg-amber-50 text-amber-800
+              dark:border-amber-700/50 dark:bg-amber-900/20 dark:text-amber-200">
+    Hint: For full features you’ll need a <span class="font-semibold">Prime key</span>
+  </div>
+</div>
             </div>
           </div>
         </div>
       </div>
+
+        <!-- ✅ PRIME / LICENSE PANEL (only for cs2-performance-system) -->
+<div v-if="showPayPal" class="mt-6">
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <!-- left: benefits -->
+    <div class="lg:col-span-2 rounded-2xl p-5 border
+                bg-white/90 border-slate-200
+                dark:bg-slate-950/45 dark:border-slate-800">
+      <div class="flex items-center justify-between gap-3">
+        <div>
+          <div class="text-sm font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-1">
+  ⭐ Prime License
+</div>
+          <div class="mt-1 text-sm text-slate-600 dark:text-slate-300">
+            Unlock full features + lifetime updates. One-time purchase.
+          </div>
+        </div>
+
+        <div class="text-right">
+          <div class="text-2xl font-black text-amber-600 dark:text-amber-400">€9.99</div>
+          <div class="text-xs text-slate-500 dark:text-slate-400">incl. VAT where applicable</div>
+        </div>
+      </div>
+      <div class="mt-1 flex justify-center">
+  
+  <img
+    src="/images/prime-key-light.png"
+    alt="Prime License Key"
+    class="block dark:hidden h-56 object-contain opacity-95"
+  />
+
+  <img
+    src="/images/prime-key-dark.png"
+    alt="Prime License Key"
+    class="hidden dark:block h-56 object-contain opacity-95"
+  />
+</div>
+<div class="text-xs text-center text-slate-500 dark:text-slate-400 mt-2">
+  Secure activation key • Instant unlock after purchase
+</div>
+      <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+        <div class="flex items-start gap-2 text-slate-700 dark:text-slate-200">
+          <span class="mt-0.5">✅</span><span>All Prime features enabled</span>
+        </div>
+        <div class="flex items-start gap-2 text-slate-700 dark:text-slate-200">
+          <span class="mt-0.5">✅</span><span>Instant checkout via PayPal</span>
+        </div>
+        <div class="flex items-start gap-2 text-slate-700 dark:text-slate-200">
+          <span class="mt-0.5">✅</span><span>Lifetime updates</span>
+        </div>
+        <div class="flex items-start gap-2 text-slate-700 dark:text-slate-200">
+          <span class="mt-0.5">✅</span><span>Priority support</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- right: checkout -->
+    <div class="rounded-2xl p-5 border
+                bg-white/90 border-slate-200
+                dark:bg-slate-950/45 dark:border-slate-800">
+      <div class="text-sm font-semibold text-slate-900 dark:text-white">
+        Checkout
+      </div>
+      <div class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+        Secure payment • You’ll be redirected after purchase.
+      </div>
+
+      <div class="mt-4">
+  <PayPalHostedButton
+    hostedButtonId="ZG7FZMEA4V9VE"
+    containerId="paypal-container-prime"
+  />
+</div>
+    </div>
+  </div>
+</div>
       <!-- DETAILS SECTIONS (auto iz description) -->
 <div v-if="parsed.sections.length" class="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-4">
   <div
@@ -331,21 +432,30 @@ function toBullets(block) {
     </div>
   </div>
 </div>
-      <!-- MID AD container -->
-      <div class="mt-8 rounded-2xl p-[1px]
-                  bg-gradient-to-r from-slate-200 via-white to-slate-200
-                  dark:from-slate-800 dark:via-slate-900/40 dark:to-slate-800
-                  shadow-[0_14px_45px_-26px_rgba(2,6,23,0.45)]">
-        <div class="rounded-2xl p-5
-                    bg-white/80 backdrop-blur
-                    dark:bg-slate-950/40
-                    border border-white/60 dark:border-slate-800/70">
-          <div class="text-xs font-semibold text-slate-600 dark:text-slate-300">Ad / Banner</div>
-          <div class="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Another clean slot for monetization (responsive).
-          </div>
-        </div>
-      </div>
+      <!-- MID AD / BANNER container -->
+<div class="relative rounded-2xl p-[1px] mb-6
+            bg-gradient-to-r from-slate-200 via-white to-slate-200
+            dark:from-slate-800 dark:via-slate-900/40 dark:to-slate-800
+            shadow-[0_16px_50px_-28px_rgba(2,6,23,0.45)]">
+  <div class="rounded-2xl p-5
+              bg-white/80 backdrop-blur
+              dark:bg-slate-950/40
+              border border-white/60 dark:border-slate-800/70">
+    <div class="text-xs font-semibold text-slate-600 dark:text-slate-300">
+      Sponsored / Banner
+    </div>
+
+    <div class="mt-6 flex justify-center">
+      <ins class="adsbygoogle"
+           data-norevia-ad="1"
+           style="display:block"
+           data-ad-client="ca-pub-4474320596321568"
+           data-ad-slot="DRUGI_SLOT_OVDJE"
+           data-ad-format="auto"
+           data-full-width-responsive="true"></ins>
+    </div>
+  </div>
+</div>
 
       <!-- RELATED -->
       <div v-if="related.length" class="mt-10">
