@@ -32,7 +32,7 @@
                   </div>
                 </div>
               </section>
-
+              
               <!-- NON-HERO HEADER -->
               <header v-else :class="`mb-8 p-6 rounded-2xl border ${theme.headerBg}`">
                 <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -51,7 +51,9 @@
                   </button>
                 </div>
               </header>
-
+              <div class="my-8">
+  <AdSense />
+</div>
               <!-- MAGAZINE LAYOUT -->
               <div v-if="page.layout === 'magazine'" class="grid grid-cols-1 lg:grid-cols-12 gap-8">
                 <main class="lg:col-span-8">
@@ -92,6 +94,10 @@
         <span class="font-medium">{{ toastMessage }}</span>
       </div>
     </div>
+
+    <div class="my-8">
+  <AdSense />
+</div>
 
     <footer class="mt-16 pt-10">
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-10">
@@ -196,6 +202,7 @@ import { computed, ref } from 'vue'
 import PublicLayout from '../../Layouts/PublicLayout.vue'
 import ContentBlocks from '../../Components/ContentBlocks.vue'
 import { usePage, Link } from '@inertiajs/vue3'
+import AdSense from '@/Components/AdSense.vue'
 
 const inertia = usePage()
 

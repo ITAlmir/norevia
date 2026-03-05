@@ -2,6 +2,7 @@
 import MainLayout from '@/Layouts/MainLayout.vue'
 import { Link, router } from '@inertiajs/vue3'
 import { computed } from 'vue'
+import AdSense from '@/Components/AdSense.vue'
 
 const props = defineProps({
   featured: { type: Array, default: () => [] },
@@ -49,6 +50,7 @@ const grouped = computed(() => {
       <div class="mb-6">
         <h1 class="text-3xl font-bold ui-page-title">Downloads</h1>
         <p class="ui-page-subtitle mt-1">Clean, practical tools with a dedicated download confirmation page.</p>
+        <AdSense />
       </div>
 
       <!-- Filters -->
@@ -185,7 +187,11 @@ const grouped = computed(() => {
                 </Link>
               </div>
             </div>
-
+            <div class="shrink-0 flex flex-col items-end gap-2">
+                <div class="text-xs text-slate-500 dark:text-slate-400 hidden sm:block">
+            <AdSense />
+                  </div>
+            </div>
             <div class="mt-3 text-xs text-slate-500 dark:text-slate-400">
               {{ d.download_count ?? 0 }} downloads • <span class="group-hover:underline">Open details →</span>
             </div>

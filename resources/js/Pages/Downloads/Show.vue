@@ -3,19 +3,7 @@ import MainLayout from '@/Layouts/MainLayout.vue'
 import { Link } from '@inertiajs/vue3' 
 import { computed, onMounted, nextTick } from 'vue'
 import PayPalHostedButton from '@/Components/PayPalHostedButton.vue'
-
-onMounted(() => {
-  setTimeout(() => {
-    try {
-      const ads = document.querySelectorAll('ins.adsbygoogle[data-norevia-ad="1"]')
-      ads.forEach((el) => {
-        if (el.dataset.loaded) return
-        ;(window.adsbygoogle = window.adsbygoogle || []).push({})
-        el.dataset.loaded = "1"
-      })
-    } catch (e) {}
-  }, 300)
-})
+import AdSense from '@/Components/AdSense.vue'
 
 const props = defineProps({
   item: { type: Object, required: true },
@@ -182,18 +170,9 @@ function toBullets(block) {
                     dark:bg-slate-950/40
                     border border-white/60 dark:border-slate-800/70">
           <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div>
-              <div class="text-xs font-semibold text-slate-600 dark:text-slate-300">
-                Sponsored / Banner
-              </div>
-              <div class="mt-6 flex justify-center">
-  <ins class="adsbygoogle"
-      data-norevia-ad="1"
-       style="display:block"
-       data-ad-client="ca-pub-4474320596321568"
-       data-ad-slot="6645163613"
-       data-ad-format="auto"
-       data-full-width-responsive="true"></ins>
+            <div>              
+              <div class="mt-6">
+  <AdSense ad-slot="6645163613" />
 </div>
             </div>
             
@@ -441,29 +420,11 @@ function toBullets(block) {
   </div>
 </div>
       <!-- MID AD / BANNER container -->
-<div class="relative rounded-2xl p-[1px] mb-6
-            bg-gradient-to-r from-slate-200 via-white to-slate-200
-            dark:from-slate-800 dark:via-slate-900/40 dark:to-slate-800
-            shadow-[0_16px_50px_-28px_rgba(2,6,23,0.45)]">
-  <div class="rounded-2xl p-5
-              bg-white/80 backdrop-blur
-              dark:bg-slate-950/40
-              border border-white/60 dark:border-slate-800/70">
-    <div class="text-xs font-semibold text-slate-600 dark:text-slate-300">
-      Sponsored / Banner
-    </div>
+    <div class="mt-6">
+  <AdSense ad-slot="6645163613" />
+</div>
 
-    <div class="mt-6 flex justify-center">
-      <ins class="adsbygoogle"
-           data-norevia-ad="1"
-           style="display:block"
-           data-ad-client="ca-pub-4474320596321568"
-           data-ad-slot="DRUGI_SLOT_OVDJE"
-           data-ad-format="auto"
-           data-full-width-responsive="true"></ins>
-    </div>
-  </div>
-</div>  
+ 
 
       <!-- RELATED -->
       <div v-if="related.length" class="mt-10">

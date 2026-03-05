@@ -303,6 +303,7 @@ import SeoHead from '@/Components/SeoHead.vue'
 import { useTheme } from '@/Utils/theme'
 import SiteFooter from '@/Components/SiteFooter.vue'
 import ConsentBanner from '@/Components/ConsentBanner.vue'
+import AdSense from '@/Components/AdSense.vue'
 
 function loadScriptOnce(src) {
   return new Promise((resolve, reject) => {
