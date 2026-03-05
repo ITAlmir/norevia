@@ -236,14 +236,7 @@ if ($oldThumb && $oldThumb !== $thumbPath && Storage::disk('public')->exists($ol
 {
     $this->assertAccess();
     $this->assertCanEdit($item);
-    // Brišemo cijeli folder downloads/{slug} (sigurno jer mi tu spremamo fajlove)
-    $folder = "downloads/{$item->slug}";
 
-    if (Storage::disk('public')->exists($folder)) {
-    Storage::disk('public')->deleteDirectory($folder);
-}
-
-    // Obriši DB record
     $item->delete();
 
     return redirect()->route('contentAdmin.downloads.index')

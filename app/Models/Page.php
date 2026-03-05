@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Storage;
 
 class Page extends Model
 {
@@ -53,28 +54,81 @@ class Page extends Model
 
     // Automatski generiši slug ako nije unesen
     public static function boot()
-    {
-        parent::boot();
+{
+    parent::boot();
 
-        static::creating(function ($page) {
-            if (empty($page->slug)) {
-                $page->slug = Str::slug($page->title);
-                
-                // Ako slug već postoji, dodaj broj na kraju
-                $count = 1;
-                $originalSlug = $page->slug;
-                while (self::where('slug', $page->slug)->exists()) {
-                    $page->slug = $originalSlug . '-' . $count;
-                    $count++;
-                }
+    static::creating(function ($page) {
+        if (empty($page->slug)) {
+            $page->slug = Str::slug($page->title);
+
+            $count = 1;
+            $originalSlug = $page->slug;
+            while (self::where('slug', $page->slug)->exists()) {
+                $page->slug = $originalSlug . '-' . $count;
+                $count++;
             }
-            
-            // Postavi autora ako nije postavljen
-            if (empty($page->user_id) && auth()->check()) {
-                $page->user_id = auth()->id();
-            }
-        });
+        }
+
+        if (empty($page->user_id) && auth()->check()) {
+            $page->user_id = auth()->id();
+        }
+    });
+
+    static::deleting(function (self $page) {
+
+    // featured_image URL -> uploads/...
+    if (!empty($page->featured_image)) {
+        $path = self::publicPathFromUrl($page->featured_image);
+        if ($path) {
+            Storage::disk('public')->delete($path);
+        }
     }
+
+    // blocks images
+    $blocks = is_array($page->blocks) ? $page->blocks : [];
+    foreach ($blocks as $b) {
+        if (($b['type'] ?? null) !== 'image') continue;
+
+        $src = (string)($b['src'] ?? '');
+        if (!$src) continue;
+
+        $path = self::publicPathFromUrl($src);
+        if ($path) {
+            Storage::disk('public')->delete($path);
+        }
+    }
+});
+}
+// ✅ helper metode u modelu:
+private static function isPublicDiskPath(string $value): bool
+{
+    $v = trim($value);
+
+    if ($v === '') return false;
+    if (str_starts_with($v, 'data:image/')) return false;
+
+    // Ako je full URL, dozvoli samo ako je naš /storage/...
+    if (preg_match('~^https?://~i', $v)) {
+        return str_contains($v, '/storage/');
+    }
+
+    // relative path (npr "uploads/.." ili "pages/..")
+    return true;
+}
+
+private static function stripPublicUrlToPath(string $value): string
+{
+    $v = trim($value);
+
+    // full url: https://tvoj-sajt.com/storage/abc.jpg -> abc.jpg
+    $pos = strpos($v, '/storage/');
+    if ($pos !== false) {
+        return ltrim(substr($v, $pos + strlen('/storage/')), '/');
+    }
+
+    // relative path ostaje isti
+    return ltrim($v, '/');
+}
 
     // Relationship sa autorom
     public function author()
@@ -130,5 +184,25 @@ public function scopeBlog($q)
         return $query->where('user_id', auth()->id());
     }
     
+    private static function publicPathFromUrl(string $value): ?string
+{
+    $v = trim($value);
+    if ($v === '') return null;
+
+    // ne diramo base64
+    if (str_starts_with($v, 'data:image/')) return null;
+
+    // Ako je full URL i ima /storage/, izvući dio poslije /storage/
+    if (preg_match('~^https?://~i', $v)) {
+        $pos = strpos($v, '/storage/');
+        if ($pos === false) return null;
+
+        $path = substr($v, $pos + strlen('/storage/')); // npr uploads/abc.jpg
+        return ltrim($path, '/');
+    }
+
+    // Ako je već relative: uploads/abc.jpg
+    return ltrim($v, '/');
+}
 
 }
