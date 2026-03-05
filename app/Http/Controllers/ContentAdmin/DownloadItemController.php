@@ -79,7 +79,7 @@ class DownloadItemController extends Controller
             'os' => ['nullable', 'string', 'max:50'],
             'is_published' => ['nullable', 'boolean'],
 
-            'file' => ['required', 'file', 'max:262144'], // 50MB
+            'file' => ['required', 'file', 'max:512000'], // 500MB
             'thumbnail' => ['nullable', 'image', 'max:4096'],
             'is_featured' => ['nullable', 'boolean'],
             'featured_order' => ['nullable', 'integer', 'min:1'],
@@ -172,7 +172,7 @@ class DownloadItemController extends Controller
         'is_featured' => ['nullable', 'boolean'],
         'featured_order' => ['nullable', 'integer', 'min:1'],
 
-        'file' => ['nullable', 'file', 'max:51200'],
+        'file' => ['nullable', 'file', 'max:512000'],// 500MB
         'thumbnail' => ['nullable', 'image', 'max:4096'],
     ]);
 
