@@ -304,6 +304,28 @@ import { useTheme } from '@/Utils/theme'
 import SiteFooter from '@/Components/SiteFooter.vue'
 import ConsentBanner from '@/Components/ConsentBanner.vue'
 
+function loadScriptOnce(src) {
+  return new Promise((resolve, reject) => {
+    // već učitan?
+    const existing = document.querySelector(`script[src="${src}"]`)
+    if (existing) return resolve(true)
+
+    const s = document.createElement('script')
+    s.src = src
+    s.async = true
+    s.onload = () => resolve(true)
+    s.onerror = reject
+    document.head.appendChild(s)
+  })
+}
+
+const PAYPAL_SDK_SRC =
+  'https://www.paypal.com/sdk/js?client-id=BAAAWeutS2INp1MoL1X11M2BHymlpZc5lwW9F7twrobsHVijVuY88PgKCRqfEicQDZgpWV1E_bk94iwaxg&components=hosted-buttons&disable-funding=venmo&currency=EUR'
+
+onMounted(async () => {
+  await loadScriptOnce(PAYPAL_SDK_SRC)
+})
+
 
 const mobileOpen = ref(false)
 
