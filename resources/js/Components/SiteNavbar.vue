@@ -3,7 +3,7 @@
     class="bg-slate-100/80 backdrop-blur border-b border-slate-300
            dark:bg-slate-900/80 dark:border-slate-700"
   >
-    <<div class="max-w-7xl mx-auto px-6 py-4">
+    <div class="max-w-7xl mx-auto px-6 py-4">
   <!-- TOP ROW (mobile): logo left, actions right -->
   <div class="flex items-center gap-3">
     <!-- LOGO -->

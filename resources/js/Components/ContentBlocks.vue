@@ -1,6 +1,24 @@
 <script setup>
 import { computed, onMounted, watch, nextTick } from 'vue'
 
+const mediaUrl = (v) => {
+  const s = String(v || '').trim()
+  if (!s) return ''
+
+  // previews
+  if (s.startsWith('data:image')) return s
+
+  // already absolute
+  if (s.startsWith('http://') || s.startsWith('https://')) return s
+
+  // already correct public path
+  if (s.startsWith('/storage/')) return s
+  if (s.startsWith('storage/')) return '/' + s
+
+  // if DB stores "uploads/xxx.jpg" or "pages/xxx.jpg"
+  return '/storage/' + s.replace(/^\/+/, '')
+}
+
 const props = defineProps({
   blocks: { type: Array, default: () => [] },
   content: { type: String, default: '' },
@@ -108,7 +126,7 @@ function ctaClass(variant = 'primary') {
 <template>
   <!-- ✅ Prefer blocks -->
   <div v-if="hasBlocks()" class="space-y-6">
-    <template v-for="(b, i) in blocks" :key="i">
+    <template v-for="(b, i) in blocksSafe" :key="i">
       <!-- TEXT BLOCK -->
       <div
         v-if="b.type === 'text'"
@@ -171,11 +189,11 @@ function ctaClass(variant = 'primary') {
         class="rounded-2xl border border-slate-800 bg-black/10 p-4"
       >
         <img
-          :src="b.src"
-          :alt="b.caption || 'Image'"
-          class="w-full max-h-[32rem] object-cover rounded-xl"
-          loading="lazy"
-        />
+  :src="mediaUrl(b.src)"
+  :alt="b.caption || 'Image'"
+  class="w-full max-h-[32rem] object-cover rounded-xl"
+  loading="lazy"
+/>
         <figcaption
           v-if="b.caption"
           class="mt-3 text-sm text-slate-300 text-center leading-relaxed"

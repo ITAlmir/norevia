@@ -15,24 +15,16 @@
             </div>
           </div>
 
-          <button
-  v-if="canCopyUrl"
-  type="button"
-  @click="copyUrl"
-  :class="`mt-5 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${theme.btn}`"
->
-  Copy URL
-</button>
+          <button v-if="canCopyUrl" type="button" @click="copyUrl"
+            :class="`mt-5 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${theme.btn}`">
+            Copy URL
+          </button>
         </div>
       </div>
 
       <!-- FEATURED IMAGE -->
       <div v-if="page.featured_image" class="mb-8">
-        <img
-          :src="page.featured_image"
-          :alt="page.title"
-          class="w-full h-96 object-cover rounded-xl shadow-lg"
-        />
+        <img :src="page.featured_image" :alt="page.title" class="w-full h-96 object-cover rounded-xl shadow-lg" />
         <p v-if="page.image_caption" class="text-center text-gray-400 mt-3 text-sm">
           {{ page.image_caption }}
         </p>
@@ -62,12 +54,8 @@
       <div v-if="related?.length" class="mt-10 border-t border-slate-700 pt-8">
         <h3 class="text-xl font-bold text-white mb-4">Još iz iste kategorije</h3>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <a
-            v-for="r in related"
-            :key="r.id"
-            :href="`/pages/${r.slug}`"
-            class="p-4 rounded-xl border border-slate-700 bg-slate-900/30 hover:bg-slate-900/50 text-gray-200"
-          >
+          <a v-for="r in related" :key="r.id" :href="`/pages/${r.slug}`"
+            class="p-4 rounded-xl border border-slate-700 bg-slate-900/30 hover:bg-slate-900/50 text-gray-200">
             <div class="font-semibold">{{ r.title }}</div>
             <div class="text-xs text-gray-400 mt-1">{{ formatDate(r.published_at) }}</div>
           </a>
@@ -77,7 +65,8 @@
 
     <!-- TOAST -->
     <div v-if="showToast" class="fixed top-6 right-6 z-50">
-      <div class="px-5 py-4 rounded-xl shadow-2xl border backdrop-blur-sm bg-green-900/90 border-green-700 text-green-100">
+      <div
+        class="px-5 py-4 rounded-xl shadow-2xl border backdrop-blur-sm bg-green-900/90 border-green-700 text-green-100">
         <span class="font-medium">{{ toastMessage }}</span>
       </div>
     </div>
