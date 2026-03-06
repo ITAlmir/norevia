@@ -21,9 +21,16 @@ function bytes(n) {
 
 function thumb(x) {
   if (!x) return ''
-  if (x.thumbnail_url) return x.thumbnail_url
-  if (x.thumbnail_path) return `/storage/${x.thumbnail_path}` // ✅ najbitnije kod tebe
-  if (x.featured_image) return x.featured_image
+
+  const thumbUrl = String(x.thumbnail_url ?? '').trim()
+  if (thumbUrl && thumbUrl !== '0') return thumbUrl
+
+  const thumbPath = String(x.thumbnail_path ?? '').trim()
+  if (thumbPath && thumbPath !== '0') return `/storage/${thumbPath}`
+
+  const featured = String(x.featured_image ?? '').trim()
+  if (featured && featured !== '0') return featured
+
   return ''
 }
 

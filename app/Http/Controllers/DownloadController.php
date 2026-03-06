@@ -153,7 +153,7 @@ public function showBySlug(string $slug)
         ->where('id', '!=', $item->id)
         ->orderByDesc('download_count')
         ->take(6)
-        ->get(['id','title','slug','category','version','download_count']);
+        ->get(['id','title','slug','category','version','download_count','thumbnail_path']);
 
     // SEO payload
     $path = "/downloads/{$item->slug}";
@@ -217,6 +217,7 @@ public function showBySlug(string $slug)
             'category' => $r->category,
             'version' => $r->version,
             'download_count' => (int)$r->download_count,
+            'thumbnail_path' => $r->thumbnail_path,
         ])->values(),
         'seo' => $seo,
     ]);
