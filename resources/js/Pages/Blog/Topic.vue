@@ -3,6 +3,7 @@ import PublicLayout from '@/Layouts/PublicLayout.vue'
 import { Link } from '@inertiajs/vue3'
 import SeoHead from '@/Components/SeoHead.vue'
 import { makeMeta, siteUrl } from '@/Utils/seo'
+import AdSense from '@/Components/AdSense.vue'
 
 const props = defineProps({
   topic: { type: String, required: true },
@@ -103,6 +104,11 @@ const jsonLd = {
       <div class="mt-4 rounded-3xl border p-6 md:p-8
                   bg-slate-100/70 border-slate-200
                   dark:bg-slate-900/30 dark:border-slate-800">
+
+                <div class="mt-6">
+  <AdSense ad-slot="6645163613" />
+</div>
+
         <h1 class="text-3xl md:text-4xl font-semibold text-slate-900 dark:text-white">
           {{ hub.title }}
         </h1>
@@ -131,6 +137,10 @@ const jsonLd = {
           </a>
         </div>
       </div>
+
+      <div class="mt-6">
+  <AdSense ad-slot="6645163613" />
+</div>
 
      <!-- Posts list -->
 <div class="mt-8 grid md:grid-cols-3 gap-4">

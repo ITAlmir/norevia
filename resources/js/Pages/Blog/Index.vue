@@ -2,6 +2,7 @@
 import PublicLayout from '@/Layouts/PublicLayout.vue'
 import { Head, Link } from '@inertiajs/vue3'
 import { computed } from 'vue'
+import AdSense from '@/Components/AdSense.vue'
 
 
 const props = defineProps({
@@ -140,6 +141,9 @@ const excerpt = (p) => (p?.meta_description || p?.excerpt || '').toString()
   </div>
 </div>
 
+<div class="mt-6">
+  <AdSense ad-slot="6645163613" />
+</div>
 
       <!-- LATEST POSTS -->
       <div class="mt-10">

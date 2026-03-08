@@ -4,6 +4,7 @@ import { Link } from '@inertiajs/vue3'
 import SeoHead from '@/Components/SeoHead.vue'
 import { makeMeta, siteUrl } from '@/Utils/seo'
 import ContentBlocks from '@/Components/ContentBlocks.vue'
+import AdSense from '@/Components/AdSense.vue'
 
 const props = defineProps({
   page: { type: Object, required: true },
@@ -79,10 +80,17 @@ const jsonLd = {
   </div>
 </div>
 
+<div class="mt-8">
+  <AdSense ad-slot="6645163613" />
+</div>
+
       <!-- Internal linking CTA -> Downloads -->
       <div class="mt-10 rounded-2xl border p-5
                   bg-slate-100/70 border-slate-200
                   dark:bg-slate-900/30 dark:border-slate-800">
+
+              
+
         <div class="font-semibold text-slate-900 dark:text-white">Useful tools</div>
         <div class="mt-1 text-sm text-slate-600 dark:text-slate-400">
           Explore related utilities in Downloads (CS2, Windows, optimization).
