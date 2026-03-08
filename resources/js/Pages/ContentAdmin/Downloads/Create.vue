@@ -1,6 +1,10 @@
 <script setup>
 import MainLayout from '@/Layouts/MainLayout.vue';
 import { useForm } from '@inertiajs/vue3'
+import { ref, nextTick } from 'vue'
+import DescriptionEditor from '@/Components/DescriptionEditor.vue'
+
+const descriptionRef = ref(null)
 
 const form = useForm({
   title: '',
@@ -13,14 +17,33 @@ const form = useForm({
   thumbnail: null,
   is_featured: false,
   featured_order: '',
-
 })
 
 function submit() {
   form.post('/content-admin/downloads', { forceFormData: true })
 }
 
-const insertTemplate = () => {
+function insertAtCursor(text) {
+  const el = descriptionRef.value
+  if (!el) {
+    form.description += text
+    return
+  }
+
+  const start = el.selectionStart ?? 0
+  const end = el.selectionEnd ?? 0
+  const value = form.description || ''
+
+  form.description = value.slice(0, start) + text + value.slice(end)
+
+  nextTick(() => {
+    el.focus()
+    const pos = start + text.length
+    el.setSelectionRange(pos, pos)
+  })
+}
+
+function insertTemplate() {
   form.description = `Tool short introduction.
 
 Built for gamers, creators and PC users.
@@ -41,7 +64,6 @@ System Requirements
 • Windows 10 / 11
 • 64-bit system`
 }
-
 </script>
 
 
@@ -88,28 +110,14 @@ System Requirements
 
           <!-- Description -->
           <div>
-            <label class="block text-gray-300 text-sm font-medium mb-2">Description</label>
-            <button
-              type="button"
-              @click="insertTemplate"
-              class="inline-flex items-center gap-2 px-4 py-2 rounded-xl
-                    border border-emerald-300 dark:border-emerald-700/50
-                    text-emerald-700 dark:text-emerald-300
-                    text-sm font-semibold
-                    hover:bg-emerald-50 dark:hover:bg-emerald-900/20
-                    transition-all duration-200"
-            >
-              <span>＋</span>
-              Insert Template
-            </button>
-            <textarea
-              v-model="form.description"
-              rows="4"
-              class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-gray-200
-                     focus:outline-none focus:ring-2 focus:ring-blue-600"
-              placeholder="Short description of the tool..."
-            />
-          </div>
+  <label class="block text-gray-300 text-sm font-medium mb-2">Description</label>
+  <DescriptionEditor
+    v-model="form.description"
+    :rows="16"
+    placeholder="Short description of the tool..."
+    :show-template="true"
+  />
+</div>
 
           <!-- Version + OS -->
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">

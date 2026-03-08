@@ -1,6 +1,30 @@
 <script setup>
 import MainLayout from '@/Layouts/MainLayout.vue'
 import { useForm } from '@inertiajs/vue3'
+import { ref, nextTick } from 'vue'
+import DescriptionEditor from '@/Components/DescriptionEditor.vue'
+
+const descriptionRef = ref(null)
+
+function insertAtCursor(text) {
+  const el = descriptionRef.value
+  if (!el) {
+    form.description += text
+    return
+  }
+
+  const start = el.selectionStart ?? 0
+  const end = el.selectionEnd ?? 0
+  const value = form.description || ''
+
+  form.description = value.slice(0, start) + text + value.slice(end)
+
+  nextTick(() => {
+    el.focus()
+    const pos = start + text.length
+    el.setSelectionRange(pos, pos)
+  })
+}
 
 const props = defineProps({ item: Object })
 
@@ -69,11 +93,13 @@ function submit() {
           </div>
 
           <div>
-            <label class="block text-gray-300 text-sm font-medium mb-2">Description</label>
-            <textarea v-model="form.description" rows="4"
-              class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-gray-200
-                     focus:outline-none focus:ring-2 focus:ring-blue-600" />
-          </div>
+  <label class="block text-gray-300 text-sm font-medium mb-2">Description</label>
+  <DescriptionEditor
+    v-model="form.description"
+    :rows="16"
+    placeholder="Update description..."
+  />
+</div>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
