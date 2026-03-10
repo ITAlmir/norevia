@@ -172,41 +172,45 @@
 
         <h2 class="text-xl font-bold text-gray-100 mb-4">Quick Actions</h2>
         <div class="flex flex-col sm:flex-row sm:flex-wrap gap-3">
+  <a
+    href="/todo"
+    class="w-full sm:w-auto px-6 py-3 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg font-medium"
+  >
+    Content Command Center
+  </a>
 
-          <!-- ZA SVE ADMINE (content_admin i super_admin) -->
-          <template v-if="$page.props.auth.user?.role === 'content_admin' || $page.props.auth.user?.role === 'super_admin'">
-            <a href="/admin/items/create"
-             class="w-full sm:w-auto px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium">
-              Add Item
-            </a>
-            <a href="/admin/categories" class="w-full sm:w-auto px-6 py-3 bg-slate-700 hover:bg-slate-600 text-gray-300 rounded-lg font-medium">
-              Categories
-            </a>
-          </template>
-          
-          <!-- SAMO ZA SUPER ADMIN -->
-          <template v-if="$page.props.auth.user?.role === 'super_admin'">
-            <a href="/super-admin" class="w-full sm:w-auto px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium">
-              Super Admin Panel
-            </a>
-            <a href="/super-admin/users" class="w-full sm:w-auto px-6 py-3 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium">
-              Manage Users
-            </a>
-          </template>
-          
-          <!-- ZA CONTENT ADMIN ILI SUPER ADMIN -->
-          <template v-if="$page.props.auth.user?.role === 'content_admin' || $page.props.auth.user?.role === 'super_admin'">
-            <a href="/content-admin" class="w-full sm:w-auto px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium">
-              Content Admin
-            </a>
-            <a href="/content-admin/pages" class="w-full sm:w-auto px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium">
-              My Pages
-            </a>
-          </template>
-          <template v-else>
-              <span class="text-gray-200 text-sm mt-2">No actions to show</span> 
-          </template>
-        </div>
+  <template v-if="$page.props.auth.user?.role === 'super_admin'">
+    <a
+      href="/admin/categories"
+      class="w-full sm:w-auto px-6 py-3 bg-slate-700 hover:bg-slate-600 text-gray-300 rounded-lg font-medium"
+    >
+      Categories
+    </a>
+
+    <a
+      href="/super-admin"
+      class="w-full sm:w-auto px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium"
+    >
+      Super Admin Panel
+    </a>
+  </template>
+
+  <template v-if="$page.props.auth.user?.role === 'content_admin' || $page.props.auth.user?.role === 'super_admin'">
+    <a
+      href="/content-admin"
+      class="w-full sm:w-auto px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium"
+    >
+      Content Admin
+    </a>
+
+    <a
+      href="/content-admin/pages"
+      class="w-full sm:w-auto px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium"
+    >
+      My Pages
+    </a>
+  </template>
+</div>
       </div>
 
 <!-- Reminders -->

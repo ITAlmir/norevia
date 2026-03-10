@@ -23,7 +23,11 @@ use App\Http\Controllers\BlogController;
 use App\Http\Controllers\LegacyPageRedirectController;
 use App\Http\Controllers\PublicPageController;
 
-
+use App\Http\Controllers\Todo\DashboardController;
+use App\Http\Controllers\Todo\TaskController;
+use App\Http\Controllers\Todo\ContentLibraryController;
+use App\Http\Controllers\Todo\MonthlyPlanController;
+use App\Http\Controllers\Todo\PublishingProfileController;
 
 
 // --------------------
@@ -401,6 +405,44 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Profile
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+
+    //Todo Routes
+        // Todo / Content Command Center
+    Route::prefix('todo')->name('todo.')->group(function () {
+        Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+
+        Route::get('/tasks', [TaskController::class, 'index'])->name('tasks.index');
+        Route::post('/tasks', [TaskController::class, 'store'])->name('tasks.store');
+        Route::patch('/tasks/{task}', [TaskController::class, 'update'])->name('tasks.update');
+        Route::delete('/tasks/{task}', [TaskController::class, 'destroy'])->name('tasks.destroy');
+
+        Route::get('/library', [ContentLibraryController::class, 'index'])->name('library.index');
+        Route::post('/library', [ContentLibraryController::class, 'store'])->name('library.store');
+        Route::patch('/library/{topic}', [ContentLibraryController::class, 'update'])->name('library.update');
+        Route::delete('/library/{topic}', [ContentLibraryController::class, 'destroy'])->name('library.destroy');
+
+        Route::get('/monthly-plan', [MonthlyPlanController::class, 'index'])->name('monthly-plan.index');
+        Route::post('/monthly-plan/generate', [MonthlyPlanController::class, 'generate'])
+    ->name('monthly-plan.generate');
+
+    Route::get('/profiles', [PublishingProfileController::class, 'index'])->name('profiles.index');
+    Route::post('/profiles', [PublishingProfileController::class, 'store'])->name('profiles.store');
+    Route::patch('/profiles/{profile}', [PublishingProfileController::class, 'update'])->name('profiles.update');
+    Route::delete('/profiles/{profile}', [PublishingProfileController::class, 'destroy'])->name('profiles.destroy');
+
+    Route::get('/archive', function () {
+    return Inertia::render('Todo/Archive/Index');
+    })->name('archive.index');
+
+    Route::post('/sync-today', [MonthlyPlanController::class, 'syncTodayTasks'])
+    ->name('sync.today');
+
+    Route::get('/archive', [TaskController::class, 'archive'])
+    ->name('archive.index');
+
+    Route::get('/analytics', [DashboardController::class, 'analytics'])
+    ->name('analytics.index');
+    });
 
     // Super admin
     Route::get('/super-admin', [SuperAdminController::class, 'dashboard'])->name('super.dashboard');

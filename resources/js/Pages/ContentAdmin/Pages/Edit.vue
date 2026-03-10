@@ -340,11 +340,12 @@
   </div>
 
   <textarea
-    v-model="block.content"
-    rows="6"
-    class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-gray-300 focus:outline-none focus:ring-2 focus:ring-slate-400"
-    placeholder="Write text… (HTML allowed)"
-  />
+  :ref="(el) => setTextAreaRef(el, i)"
+  v-model="block.content"
+  rows="6"
+  class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-gray-300 focus:outline-none focus:ring-2 focus:ring-slate-400"
+  placeholder="Write text… (HTML allowed)"
+/>
 </div>
 
       <!-- CTA BLOCK -->
@@ -1061,7 +1062,13 @@ const ctaPreviewClass = (variant) => {
   return 'bg-gradient-to-r from-emerald-600 to-sky-600 text-white hover:opacity-95'
 }
 
-const getTextareas = () => Array.from(document.querySelectorAll('textarea'))
+const textAreaRefs = ref({})
+
+const setTextAreaRef = (el, i) => {
+  if (el) textAreaRefs.value[i] = el
+}
+
+const getTA = (i) => textAreaRefs.value[i] || null
 
 const wrapSelection = (blockIndex, tag) => {
   const ta = getTextareas()[blockIndex]
@@ -1081,7 +1088,7 @@ const wrapSelection = (blockIndex, tag) => {
 const applyColor = (blockIndex, className) => {
   if (!className) return
 
-  const ta = getTextareas()[blockIndex]
+const ta = getTA(blockIndex)
   if (!ta) return
 
   const start = ta.selectionStart
@@ -1096,8 +1103,11 @@ const applyColor = (blockIndex, className) => {
 }
 
 const insertBreak = (blockIndex) => {
-  const ta = getTextareas()[blockIndex]
-  if (!ta) return
+  const ta = getTA(blockIndex)
+if (!ta) {
+  form.blocks[blockIndex].content = (form.blocks[blockIndex].content || '') + '<br>'
+  return
+}
 
   const start = ta.selectionStart
   const end = ta.selectionEnd
@@ -1114,7 +1124,7 @@ const insertLink = (blockIndex) => {
   // ✅ auto add https so it won't become /google.com
   if (!/^https?:\/\//i.test(url)) url = 'https://' + url
 
-  const ta = getTextareas()[blockIndex]
+  const ta = getTA(blockIndex)
   if (!ta) return
 
   const start = ta.selectionStart
