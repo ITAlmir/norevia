@@ -242,16 +242,7 @@ const relatedClass = (index) => {
               >
                 <div class="prose prose-lg max-w-none prose-slate dark:prose-invert whitespace-pre-line" v-html="page.content"></div>
               </div>
-            </main>
-
-            <aside class="lg:col-span-4">
-              <div class="rounded-2xl border border-slate-200 bg-white/80 p-5 dark:border-slate-800 dark:bg-slate-900/20">
-                <div class="text-sm font-semibold text-slate-900 dark:text-white">In this article</div>
-                <div class="mt-2 text-sm text-slate-600 dark:text-slate-400">
-                  Read the full guide and explore more posts from this topic below.
-                </div>
-              </div>
-            </aside>
+            </main>            
           </div>
 
           <!-- CLASSIC / MINIMAL / DEFAULT -->
