@@ -17,15 +17,12 @@ class ContentTopic extends Model
         'topic_code',
         'title',
         'voice_tool',
-        'status',
+        'content_bucket',
+        'shared_content_group',
         'caption',
         'description',
         'hashtags',
         'script_notes',
+        'status',
     ];
-
-    public function user()
-    {
-        return $this->belongsTo(User::class);
-    }
 }

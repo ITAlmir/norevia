@@ -10,17 +10,20 @@ class MonthlyPlanItem extends Model
     use HasFactory;
 
     protected $fillable = [
-    'monthly_plan_id',
-    'user_id',
-    'content_topic_id',
-    'plan_date',
-    'task_title',
-    'platform',
-    'series',
-    'voice_tool',
-    'publish_time',
-    'status',
-];
+        'monthly_plan_id',
+        'user_id',
+        'content_topic_id',
+        'plan_date',
+        'task_title',
+        'profile_name',
+        'content_bucket',
+        'shared_content_group',
+        'platform',
+        'series',
+        'voice_tool',
+        'publish_time',
+        'status',
+    ];
 
     protected $casts = [
         'plan_date' => 'date',

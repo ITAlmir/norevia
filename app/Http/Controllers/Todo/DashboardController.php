@@ -6,279 +6,272 @@ use App\Http\Controllers\Controller;
 use App\Models\ContentTopic;
 use App\Models\MonthlyPlanItem;
 use App\Models\PublishingProfile;
-use App\Models\TodoTask;
 use Carbon\Carbon;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
 
 class DashboardController extends Controller
 {
     public function index()
     {
-        $user = auth()->user();
-        $today = Carbon::today();
-        $this->syncTasksForToday($user->id, $today->toDateString());
-
-        $todayTasks = TodoTask::query()
-            ->where('user_id', $user->id)
-            ->whereDate('scheduled_for', $today)
-            ->orderBy('publish_time')
-            ->latest('id')
-            ->get([
-                'id',
-                'title',
-                'platform',
-                'series',
-                'voice_tool',
-                'scheduled_for',
-                'publish_time',
-                'status',
-            ]);
-
-        $lateTasks = TodoTask::query()
-            ->where('user_id', $user->id)
-            ->where('status', '!=', 'done')
-            ->whereDate('scheduled_for', '<', $today)
-            ->orderBy('scheduled_for')
-            ->limit(8)
-            ->get([
-                'id',
-                'title',
-                'platform',
-                'series',
-                'voice_tool',
-                'scheduled_for',
-                'publish_time',
-                'status',
-            ]);
-
-        $scheduleToday = $todayTasks
-            ->filter(fn ($task) => !empty($task->publish_time))
-            ->values();
-
-        $libraryStats = [
-            'cs2' => ContentTopic::where('user_id', $user->id)->where('category', 'cs2')->where('status', 'available')->count(),
-            'fb' => ContentTopic::where('user_id', $user->id)->where('category', 'fb')->where('status', 'available')->count(),
-            'world' => ContentTopic::where('user_id', $user->id)->where('category', 'world')->where('status', 'available')->count(),
-            'general' => ContentTopic::where('user_id', $user->id)->where('category', 'general')->where('status', 'available')->count(),
-        ];
-
-        $bufferStats = [
-            'tiktok_ready' => TodoTask::where('user_id', $user->id)->where('status', 'pending')->where('platform', 'tiktok')->whereDate('scheduled_for', '>=', $today)->count(),
-            'fb_ready' => TodoTask::where('user_id', $user->id)->where('status', 'pending')->where('platform', 'fb')->whereDate('scheduled_for', '>=', $today)->count(),
-            'world_ready' => TodoTask::where('user_id', $user->id)->where('status', 'pending')->where('platform', 'world')->whereDate('scheduled_for', '>=', $today)->count(),
-        ];
-
-        $daysInMonth = $today->daysInMonth;
-        $monthProgress = (int) round(($today->day / $daysInMonth) * 100);
+        $today = Carbon::today()->startOfDay();
+        $endOfMonth = Carbon::today()->endOfMonth()->startOfDay();
+        $daysRemainingInMonth = (int) $today->diffInDays($endOfMonth) + 1;
 
         $activeProfiles = PublishingProfile::query()
-            ->where('user_id', $user->id)
             ->where('is_active', true)
-            ->get([
-                'id',
-                'name',
-                'platform',
-                'daily_target',
-                'default_voice_tool',
-                'is_active',
-            ]);
+            ->orderBy('name')
+            ->get();
 
-        $platformCoverage = $activeProfiles->map(function ($profile) use ($user, $today, $daysInMonth) {
-            $platform = strtolower((string) $profile->platform);
-
-            $availableForPlatform = ContentTopic::query()
-                ->where('user_id', $user->id)
-                ->where('status', 'available')
-                ->where(function ($query) use ($platform) {
-                    $query->whereRaw('LOWER(platform) = ?', [$platform])
-                        ->orWhereRaw('LOWER(category) = ?', ['general']);
-                })
-                ->count();
-
-            $daysRemainingInMonth = max(0, $daysInMonth - $today->day + 1);
-            $neededForPlatform = $profile->daily_target * $daysRemainingInMonth;
-            $missingForPlatform = max(0, $neededForPlatform - $availableForPlatform);
-
-            $coverageDaysForPlatform = $profile->daily_target > 0
-                ? (int) floor($availableForPlatform / $profile->daily_target)
-                : 0;
-
-            return [
-                'profile_id' => $profile->id,
-                'name' => $profile->name,
-                'platform' => $profile->platform,
-                'daily_target' => $profile->daily_target,
-                'available_topics' => $availableForPlatform,
-                'coverage_days' => $coverageDaysForPlatform,
-                'missing_topics' => $missingForPlatform,
-            ];
-        })->values();
-
-        $dailyCapacity = (int) $activeProfiles->sum('daily_target');
-
-        $availableTopics = ContentTopic::query()
-            ->where('user_id', $user->id)
-            ->where('status', 'available')
-            ->count();
-
-        $coverageDays = $dailyCapacity > 0
-            ? (int) floor($availableTopics / $dailyCapacity)
-            : 0;
-
-        $daysRemainingInMonth = max(0, $daysInMonth - $today->day + 1);
-        $neededForMonth = $dailyCapacity * $daysRemainingInMonth;
-        $missingTopics = max(0, $neededForMonth - $availableTopics);
+        $dailyCapacity = $activeProfiles->sum(function ($profile) {
+            return match ($profile->schedule_type) {
+                'monthly' => 0,
+                'weekly' => 0,
+                default => (int) $profile->daily_target,
+            };
+        });
 
         $todayPlan = MonthlyPlanItem::query()
-    ->where('user_id', $user->id)
-    ->whereDate('plan_date', $today)
-    ->orderBy('id')
-    ->get([
-        'id',
-        'task_title',
-        'platform',
-        'series',
-        'voice_tool',
-        'publish_time',
-        'plan_date',
-        'status',
-    ])
-    ->map(function ($item) use ($user) {
-        $task = TodoTask::query()
-            ->where('user_id', $user->id)
-            ->where('plan_item_id', $item->id)
-            ->first(['id', 'status']);
-
-        return [
-            'id' => $item->id,
-            'task_id' => $task?->id,
-            'task_title' => $item->task_title,
-            'platform' => $item->platform,
-            'series' => $item->series,
-            'voice_tool' => $item->voice_tool,
-            'publish_time' => $item->publish_time,
-            'plan_date' => $item->plan_date,
-            'status' => $item->status,
-            'task_status' => $task?->status,
-        ];
-    })
-    ->values();
+            ->with('contentTopic')
+            ->whereDate('plan_date', $today->toDateString())
+            ->orderBy('publish_time')
+            ->orderBy('id')
+            ->get()
+            ->map(fn ($item) => $this->mapPlanItem($item));
 
         $upcomingPlan = MonthlyPlanItem::query()
-            ->where('user_id', $user->id)
-            ->whereDate('plan_date', '>', $today)
+            ->with('contentTopic')
+            ->whereDate('plan_date', '>', $today->toDateString())
+            ->whereDate('plan_date', '<=', $endOfMonth->toDateString())
             ->orderBy('plan_date')
-            ->limit(10)
-            ->get([
-                'id',
-                'task_title',
-                'platform',
-                'series',
-                'voice_tool',
-                'plan_date',
-                'publish_time',
-                'status',
-            ]);
+            ->orderBy('publish_time')
+            ->orderBy('id')
+            ->get()
+            ->map(fn ($item) => $this->mapPlanItem($item));
+
+        // Privremeno isključeno dok ne pošalješ tačan Task model
+        $lateTasks = collect([]);
+
+        $plannedRemaining = MonthlyPlanItem::query()
+            ->whereDate('plan_date', '>=', $today->toDateString())
+            ->whereDate('plan_date', '<=', $endOfMonth->toDateString())
+            ->count();
+
+        $requiredRemaining = (int) $activeProfiles->sum(function ($profile) use ($daysRemainingInMonth) {
+    return match ($profile->schedule_type) {
+        'monthly' => (int) $profile->daily_target,
+        'weekly' => (int) ceil(($daysRemainingInMonth / 7) * (int) $profile->daily_target),
+        default => (int) $daysRemainingInMonth * (int) $profile->daily_target,
+    };
+});
+
+        $missingTopics = max($requiredRemaining - $plannedRemaining, 0);
+        $coverageDays = $dailyCapacity > 0 ? (int) floor($plannedRemaining / $dailyCapacity) : 0;
+        $monthProgress = (int) round(($today->day / $today->daysInMonth) * 100);
+
+        $bucketCoverage = $this->buildBucketCoverage($activeProfiles, $today, $endOfMonth);
+
+        $libraryOverview = [
+            'available' => ContentTopic::query()->where('status', 'available')->count(),
+            'planned' => MonthlyPlanItem::query()
+                ->whereDate('plan_date', '>=', $today->copy()->startOfMonth()->toDateString())
+                ->whereDate('plan_date', '<=', $endOfMonth->toDateString())
+                ->count(),
+            'completed' => MonthlyPlanItem::query()
+                ->whereDate('plan_date', '>=', $today->copy()->startOfMonth()->toDateString())
+                ->whereDate('plan_date', '<=', $endOfMonth->toDateString())
+                ->where('status', 'done')
+                ->count(),
+            'archived' => ContentTopic::query()->where('status', 'archived')->count(),
+        ];
 
         return Inertia::render('Todo/Dashboard', [
             'monthProgress' => $monthProgress,
-            'todayTasks' => $todayTasks,
-            'scheduleToday' => $scheduleToday,
+            'todayPlan' => $todayPlan,
+            'upcomingPlan' => $upcomingPlan,
             'lateTasks' => $lateTasks,
-            'libraryStats' => $libraryStats,
-            'bufferStats' => $bufferStats,
-            'activeProfiles' => $activeProfiles,
+
+            'activeProfiles' => $activeProfiles->map(function ($profile) {
+                return [
+                    'id' => $profile->id,
+                    'name' => $profile->name,
+                    'profile_name' => $profile->name,
+                    'platform' => $profile->platform,
+                    'schedule_type' => $profile->schedule_type,
+                    'daily_target' => (int) $profile->daily_target,
+                    'default_voice_tool' => $profile->default_voice_tool,
+                    'default_publish_time' => $profile->default_publish_time,
+                    'publish_times' => $this->normalizePublishTimes($profile->publish_times ?? null),
+                ];
+            })->values(),
+
             'dailyCapacity' => $dailyCapacity,
-            'availableTopics' => $availableTopics,
+            'plannedRemaining' => $plannedRemaining,
             'coverageDays' => $coverageDays,
             'missingTopics' => $missingTopics,
             'daysRemainingInMonth' => $daysRemainingInMonth,
-            'todayPlan' => $todayPlan,
-            'upcomingPlan' => $upcomingPlan,
-            'platformCoverage' => $platformCoverage,
+            'bucketCoverage' => $bucketCoverage,
+            'libraryOverview' => $libraryOverview,
         ]);
     }
 
-    private function syncTasksForToday(int $userId, string $today): void
+    protected function buildBucketCoverage(Collection $profiles, Carbon $today, Carbon $endOfMonth): array
 {
-    $planItems = \App\Models\MonthlyPlanItem::where('user_id', $userId)
-        ->whereDate('plan_date', $today)
-        ->get();
+    $daysRemainingInMonth = (int) $today->copy()->startOfDay()->diffInDays($endOfMonth->copy()->startOfDay()) + 1;
 
-    foreach ($planItems as $item) {
-        $exists = \App\Models\TodoTask::where('user_id', $userId)
-            ->where('plan_item_id', $item->id)
-            ->exists();
+    $hasProfileBucket = Schema::hasColumn('publishing_profiles', 'content_bucket');
+    $hasPlanBucket = Schema::hasColumn('monthly_plan_items', 'content_bucket');
+    $hasTopicBucket = Schema::hasColumn('content_topics', 'content_bucket');
 
-        if (!$exists) {
-            \App\Models\TodoTask::create([
-                'user_id' => $userId,
-                'plan_item_id' => $item->id,
-                'title' => $item->task_title,
-                'platform' => $item->platform,
-                'series' => $item->series,
-                'voice_tool' => $item->voice_tool,
-                'scheduled_for' => $today,
-                'status' => 'pending',
-            ]);
-        }
+    if (! $hasProfileBucket) {
+        return [];
     }
+
+    $grouped = $profiles
+        ->filter(fn ($profile) => filled($profile->content_bucket))
+        ->groupBy('content_bucket');
+
+    return $grouped->map(function (Collection $group, string $bucket) use ($today, $endOfMonth, $daysRemainingInMonth, $hasPlanBucket, $hasTopicBucket) {
+        $representative = $group->first();
+
+        $required = (int) $group->sum(function ($profile) use ($daysRemainingInMonth) {
+            return match ($profile->schedule_type) {
+                'monthly' => (int) $profile->daily_target,
+                'weekly' => (int) ceil(($daysRemainingInMonth / 7) * (int) $profile->daily_target),
+                default => (int) $daysRemainingInMonth * (int) $profile->daily_target,
+            };
+        });
+
+        $planned = 0;
+        if ($hasPlanBucket) {
+            $planned = MonthlyPlanItem::query()
+                ->where('content_bucket', $bucket)
+                ->whereDate('plan_date', '>=', $today->toDateString())
+                ->whereDate('plan_date', '<=', $endOfMonth->toDateString())
+                ->count();
+        }
+
+        $available = 0;
+        if ($hasTopicBucket) {
+            $available = ContentTopic::query()
+                ->where('content_bucket', $bucket)
+                ->where('status', 'available')
+                ->count();
+        }
+
+        $planned = (int) $planned;
+        $available = (int) $available;
+        $missing = (int) max($required - $planned, 0);
+
+        return [
+            'content_bucket' => $bucket,
+            'label' => $representative->name,
+            'required' => $required,
+            'planned' => $planned,
+            'available' => $available,
+            'missing' => $missing,
+        ];
+    })->values()->all();
 }
 
-public function analytics()
+    protected function mapPlanItem(MonthlyPlanItem $item): array
+    {
+        $topic = $item->contentTopic;
+
+        return [
+            'id' => $item->id,
+            'task_title' => $item->task_title ?? $topic?->title ?? 'Untitled item',
+            'profile_name' => $item->profile_name ?? null,
+            'platform' => $item->platform ?? $topic?->platform,
+            'series' => $item->series ?? $topic?->series,
+            'voice_tool' => $item->voice_tool ?? $topic?->voice_tool,
+            'publish_time' => $item->publish_time ?? null,
+            'plan_date' => $item->plan_date,
+            'status' => $item->status,
+            'task_status' => $item->status,
+            'cleared_at' => null,
+            'content_bucket' => Schema::hasColumn('monthly_plan_items', 'content_bucket')
+                ? $item->content_bucket
+                : null,
+        ];
+    }
+
+    protected function normalizePublishTimes($publishTimes): array
+    {
+        if (is_array($publishTimes)) {
+            return array_values(array_filter($publishTimes));
+        }
+
+        if (blank($publishTimes)) {
+            return [];
+        }
+
+        if (is_string($publishTimes)) {
+            $decoded = json_decode($publishTimes, true);
+
+            if (is_array($decoded)) {
+                return array_values(array_filter($decoded));
+            }
+        }
+
+        return [];
+    }
+
+    public function analytics()
 {
-    $user = auth()->user();
+    $totalTasks = MonthlyPlanItem::count();
 
-    $start = now()->startOfMonth();
-    $end = now()->endOfMonth();
+    $doneTasks = MonthlyPlanItem::where('status', 'done')->count();
+    $plannedTasks = MonthlyPlanItem::where('status', 'planned')->count();
+    $skippedTasks = MonthlyPlanItem::where('status', 'skipped')->count();
 
-    $tasks = TodoTask::query()
-        ->where('user_id', $user->id)
-        ->whereBetween('scheduled_for', [$start, $end])
-        ->get();
-
-    $total = $tasks->count();
-    $done = $tasks->where('status', 'done')->count();
-    $pending = $tasks->where('status', 'pending')->count();
-
-    $platformStats = $tasks
+    $platformStats = MonthlyPlanItem::query()
+        ->selectRaw('platform, COUNT(*) as total')
+        ->whereNotNull('platform')
         ->groupBy('platform')
-        ->map(fn ($g) => $g->count())
-        ->sortDesc()
-        ->map(fn ($count, $platform) => [
-            'platform' => $platform,
-            'count' => $count,
+        ->orderByDesc('total')
+        ->get()
+        ->map(fn ($row) => [
+            'label' => $row->platform ?: 'Unknown',
+            'total' => (int) $row->total,
         ])
         ->values();
 
-    $seriesStats = $tasks
+    $seriesStats = MonthlyPlanItem::query()
+        ->selectRaw('series, COUNT(*) as total')
+        ->whereNotNull('series')
         ->groupBy('series')
-        ->map(fn ($g) => $g->count())
-        ->sortDesc()
-        ->take(10)
-        ->map(fn ($count, $series) => [
-            'series' => $series,
-            'count' => $count,
+        ->orderByDesc('total')
+        ->get()
+        ->map(fn ($row) => [
+            'label' => $row->series ?: 'Unknown',
+            'total' => (int) $row->total,
         ])
         ->values();
 
-    $voiceStats = $tasks
+    $voiceToolStats = MonthlyPlanItem::query()
+        ->selectRaw('voice_tool, COUNT(*) as total')
+        ->whereNotNull('voice_tool')
         ->groupBy('voice_tool')
-        ->map(fn ($g) => $g->count())
-        ->sortDesc()
-        ->map(fn ($count, $voice) => [
-            'voice_tool' => $voice,
-            'count' => $count,
+        ->orderByDesc('total')
+        ->get()
+        ->map(fn ($row) => [
+            'label' => $row->voice_tool ?: 'Unknown',
+            'total' => (int) $row->total,
         ])
         ->values();
 
-    return inertia('Todo/Analytics/Index', [
-        'totalTasks' => $total,
-        'doneTasks' => $done,
-        'pendingTasks' => $pending,
+    return Inertia::render('Todo/Analytics/Index', [
+        'stats' => [
+            'totalTasks' => $totalTasks,
+            'doneTasks' => $doneTasks,
+            'plannedTasks' => $plannedTasks,
+            'skippedTasks' => $skippedTasks,
+        ],
         'platformStats' => $platformStats,
         'seriesStats' => $seriesStats,
-        'voiceStats' => $voiceStats,
+        'voiceToolStats' => $voiceToolStats,
     ]);
 }
 }

@@ -13,6 +13,9 @@ class TodoTask extends Model
         'user_id',
         'plan_item_id',
         'title',
+        'profile_name',
+        'content_bucket',
+        'shared_content_group',
         'platform',
         'series',
         'voice_tool',
@@ -24,6 +27,7 @@ class TodoTask extends Model
 
     protected $casts = [
         'scheduled_for' => 'date',
+        'cleared_at' => 'datetime',
     ];
 
     public function user()

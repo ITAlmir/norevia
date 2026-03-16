@@ -1,30 +1,36 @@
 <script setup>
 import TodoLayout from '@/Layouts/TodoLayout.vue'
 import { router } from '@inertiajs/vue3'
+import { computed, ref } from 'vue'
+import { useUiFeedback } from '@/Composables/useUiFeedback'
 
-defineProps({
+const props = defineProps({
   monthProgress: { type: Number, default: 0 },
-  todayTasks: { type: Array, default: () => [] },
-  scheduleToday: { type: Array, default: () => [] },
+  todayPlan: { type: Array, default: () => [] },
+  upcomingPlan: { type: Array, default: () => [] },
   lateTasks: { type: Array, default: () => [] },
-  libraryStats: {
-    type: Object,
-    default: () => ({ cs2: 0, fb: 0, world: 0, general: 0 }),
-  },
-  bufferStats: {
-    type: Object,
-    default: () => ({ tiktok_ready: 0, fb_ready: 0, world_ready: 0 }),
-  },
   activeProfiles: { type: Array, default: () => [] },
-    dailyCapacity: { type: Number, default: 0 },
-    availableTopics: { type: Number, default: 0 },
-    coverageDays: { type: Number, default: 0 },
-    missingTopics: { type: Number, default: 0 },
-    daysRemainingInMonth: { type: Number, default: 0 },
-    todayPlan: { type: Array, default: () => [] },
-    upcomingPlan: { type: Array, default: () => [] },
-    platformCoverage: { type: Array, default: () => [] },
+
+  dailyCapacity: { type: Number, default: 0 },
+  plannedRemaining: { type: Number, default: 0 },
+  coverageDays: { type: Number, default: 0 },
+  missingTopics: { type: Number, default: 0 },
+  daysRemainingInMonth: { type: Number, default: 0 },
+
+  bucketCoverage: { type: Array, default: () => [] },
+
+  libraryOverview: {
+    type: Object,
+    default: () => ({
+      available: 0,
+      planned: 0,
+      completed: 0,
+      archived: 0,
+    }),
+  },
 })
+
+const { showToast } = useUiFeedback()
 
 const badgeClass = (status) => {
   if (status === 'done') {
@@ -39,13 +45,156 @@ const badgeClass = (status) => {
   return 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
 }
 
-const toggleTodayTask = (item) => {
-  if (!item.task_id) return
+const isTaskCleared = (item) => !!item?.cleared_at
 
-  router.patch(`/todo/tasks/${item.task_id}`, {
-    status: item.task_status === 'done' ? 'pending' : 'done',
+const toggleTodayTask = (item) => {
+  if (!item?.id) return
+  if (item.cleared_at) return
+
+  const nextStatus = item.status === 'done' || item.task_status === 'done'
+    ? 'planned'
+    : 'done'
+
+  router.patch(`/todo/monthly-plan/items/${item.id}/toggle`, {
+    status: nextStatus,
   }, {
     preserveScroll: true,
+    onSuccess: () => {
+      showToast(
+        nextStatus === 'done'
+          ? 'Today item marked done.'
+          : 'Today item returned to planned state.',
+        'success'
+      )
+    },
+  })
+}
+
+const toggleLateTask = (task) => {
+  if (!task?.id) return
+  if (task.cleared_at) return
+
+  const nextStatus = task.status === 'done' ? 'pending' : 'done'
+
+  router.patch(`/todo/tasks/${task.id}`, {
+    status: nextStatus,
+  }, {
+    preserveScroll: true,
+    onSuccess: () => {
+      showToast(
+        nextStatus === 'done'
+          ? 'Late task marked done.'
+          : 'Late task returned to planned state.',
+        'success'
+      )
+    },
+  })
+}
+
+const toggleUpcomingTask = (item) => {
+  if (!item?.id) return
+  if (item.cleared_at) return
+
+  const nextStatus = item.status === 'done' || item.task_status === 'done'
+    ? 'planned'
+    : 'done'
+
+  router.patch(`/todo/monthly-plan/items/${item.id}/toggle`, {
+    status: nextStatus,
+  }, {
+    preserveScroll: true,
+    onSuccess: () => {
+      showToast(
+        nextStatus === 'done'
+          ? 'Upcoming item marked done.'
+          : 'Upcoming item returned to planned state.',
+        'success'
+      )
+    },
+  })
+}
+
+const toDateKey = (value) => {
+  if (!value) return ''
+  return String(value).slice(0, 10)
+}
+
+const groupedUpcomingPlan = computed(() => {
+  const groups = {}
+
+  for (const item of (props.upcomingPlan ?? [])) {
+    const key = toDateKey(item.plan_date)
+    if (!key) continue
+
+    if (!groups[key]) {
+      groups[key] = []
+    }
+
+    groups[key].push(item)
+  }
+
+  Object.keys(groups).forEach((key) => {
+    groups[key].sort((a, b) => {
+      const at = a.publish_time || ''
+      const bt = b.publish_time || ''
+      return at.localeCompare(bt)
+    })
+  })
+
+  return groups
+})
+
+const availableUpcomingDates = computed(() => {
+  return Object.keys(groupedUpcomingPlan.value).sort((a, b) => a.localeCompare(b))
+})
+
+const selectedUpcomingDate = ref('')
+
+const ensureUpcomingDateSelected = () => {
+  if (!availableUpcomingDates.value.length) {
+    selectedUpcomingDate.value = ''
+    return
+  }
+
+  if (!selectedUpcomingDate.value || !availableUpcomingDates.value.includes(selectedUpcomingDate.value)) {
+    selectedUpcomingDate.value = availableUpcomingDates.value[0]
+  }
+}
+
+const selectedUpcomingItems = computed(() => {
+  ensureUpcomingDateSelected()
+
+  if (!selectedUpcomingDate.value) return []
+
+  return groupedUpcomingPlan.value[selectedUpcomingDate.value] ?? []
+})
+
+const goToPreviousUpcomingDay = () => {
+  ensureUpcomingDateSelected()
+
+  const index = availableUpcomingDates.value.indexOf(selectedUpcomingDate.value)
+  if (index > 0) {
+    selectedUpcomingDate.value = availableUpcomingDates.value[index - 1]
+  }
+}
+
+const goToNextUpcomingDay = () => {
+  ensureUpcomingDateSelected()
+
+  const index = availableUpcomingDates.value.indexOf(selectedUpcomingDate.value)
+  if (index !== -1 && index < availableUpcomingDates.value.length - 1) {
+    selectedUpcomingDate.value = availableUpcomingDates.value[index + 1]
+  }
+}
+
+const formatDashboardDate = (date) => {
+  if (!date) return ''
+
+  return new Date(date).toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: '2-digit',
+    year: 'numeric',
   })
 }
 </script>
@@ -65,7 +214,7 @@ const toggleTodayTask = (item) => {
               {{ monthProgress }}%
             </h2>
             <p class="mt-3 max-w-xl text-sm leading-6 text-slate-300 md:text-base">
-              Pregled kapaciteta, plana i sadržaja za ostatak mjeseca.
+              Calendar progress for the current month.
             </p>
           </div>
 
@@ -96,10 +245,10 @@ const toggleTodayTask = (item) => {
 
         <div class="rounded-[24px] border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
           <div class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
-            Available Topics
+            Planned Remaining
           </div>
           <div class="mt-3 text-3xl font-black text-slate-900 dark:text-white">
-            {{ availableTopics }}
+            {{ plannedRemaining }}
           </div>
         </div>
 
@@ -114,7 +263,7 @@ const toggleTodayTask = (item) => {
 
         <div class="rounded-[24px] border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
           <div class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
-            Missing Topics
+            Missing Slots
           </div>
           <div class="mt-3 text-3xl font-black text-rose-600 dark:text-rose-400">
             {{ missingTopics }}
@@ -125,131 +274,172 @@ const toggleTodayTask = (item) => {
 
     <div class="mt-6 grid gap-6 xl:grid-cols-3">
       <section class="xl:col-span-2 rounded-[28px] border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
-  <div class="flex items-center justify-between gap-4">
-    <div>
-      <h3 class="text-xl font-black tracking-tight text-slate-900 dark:text-white">
-        Today Plan
-      </h3>
-      <p class="mt-1 text-sm text-slate-600 dark:text-slate-400">
-        Šta bi danas trebalo izaći po generatoru plana.
-      </p>
-    </div>
-
-    <div class="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
-      {{ todayPlan.length }} planned
-    </div>
-  </div>
-
-  <div v-if="todayPlan.length" class="mt-6 space-y-3">
-    <div
-      v-for="item in todayPlan"
-      :key="item.id"
-      :class="item.task_status === 'done'
-        ? 'rounded-2xl border border-emerald-300 bg-emerald-50/60 p-4 dark:border-emerald-900/40 dark:bg-emerald-950/20'
-        : 'rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/60'"
-    >
-      <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <div class="text-base font-bold text-slate-900 dark:text-white">
-            {{ item.task_title }}
+        <div class="flex items-center justify-between gap-4">
+          <div>
+            <h3 class="text-xl font-black tracking-tight text-slate-900 dark:text-white">
+              Today Plan
+            </h3>
+            <p class="mt-1 text-sm text-slate-600 dark:text-slate-400">
+              Planned content scheduled for today.
+            </p>
           </div>
 
-          <div class="mt-2 flex flex-wrap gap-2 text-xs">
-            <span v-if="item.platform" class="rounded-full bg-slate-200 px-2.5 py-1 font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
-              {{ item.platform }}
-            </span>
-
-            <span v-if="item.series" class="rounded-full bg-violet-100 px-2.5 py-1 font-semibold text-violet-700 dark:bg-violet-900/30 dark:text-violet-300">
-              {{ item.series }}
-            </span>
-
-            <span v-if="item.voice_tool" class="rounded-full bg-cyan-100 px-2.5 py-1 font-semibold text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300">
-              {{ item.voice_tool }}
-            </span>
-
-            <span v-if="item.publish_time" class="rounded-full bg-amber-100 px-2.5 py-1 font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
-              {{ item.publish_time }}
-            </span>
+          <div class="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+            {{ todayPlan.length }} items
           </div>
         </div>
 
-        <div class="flex flex-wrap items-center gap-2">
-          <span
-            class="rounded-full px-2.5 py-1 text-xs font-bold uppercase tracking-wide"
-            :class="badgeClass(item.status)"
-          >
-            {{ item.status }}
-          </span>
-
-          <button
-            v-if="item.task_id"
-            type="button"
-            class="rounded-xl px-3 py-2 text-xs font-bold transition"
+        <div v-if="todayPlan.length" class="mt-6 space-y-3">
+          <div
+            v-for="item in todayPlan"
+            :key="item.id"
             :class="item.task_status === 'done'
-              ? 'border border-slate-300 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800'
-              : 'bg-emerald-600 text-white hover:bg-emerald-700'"
-            @click="toggleTodayTask(item)"
+              ? 'rounded-2xl border border-emerald-300 bg-emerald-50/60 p-4 dark:border-emerald-900/40 dark:bg-emerald-950/20'
+              : 'rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/60'"
           >
-            {{ item.task_status === 'done' ? 'Mark Pending' : 'Mark Done' }}
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
+            <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <div class="text-base font-bold text-slate-900 dark:text-white">
+                  {{ item.task_title }}
+                </div>
 
-  <div v-else class="mt-6 rounded-2xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
-    Nema generisanog plana za danas.
-  </div>
-</section>
+                <div class="mt-2 flex flex-wrap gap-2 text-xs">
+                  <span
+                    v-if="item.profile_name"
+                    class="rounded-full bg-slate-900 px-2.5 py-1 font-semibold text-white dark:bg-white dark:text-slate-900"
+                  >
+                    {{ item.profile_name }}
+                  </span>
+
+                  <span
+                    v-if="item.platform"
+                    class="rounded-full bg-slate-200 px-2.5 py-1 font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                  >
+                    {{ item.platform }}
+                  </span>
+
+                  <span
+                    v-if="item.series"
+                    class="rounded-full bg-violet-100 px-2.5 py-1 font-semibold text-violet-700 dark:bg-violet-900/30 dark:text-violet-300"
+                  >
+                    {{ item.series }}
+                  </span>
+
+                  <span
+                    v-if="item.voice_tool"
+                    class="rounded-full bg-cyan-100 px-2.5 py-1 font-semibold text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300"
+                  >
+                    {{ item.voice_tool }}
+                  </span>
+
+                  <span
+                    v-if="item.publish_time"
+                    class="rounded-full bg-amber-100 px-2.5 py-1 font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
+                  >
+                    {{ item.publish_time }}
+                  </span>
+
+                  <span
+                    v-if="item.cleared_at"
+                    class="rounded-full bg-slate-300 px-2.5 py-1 font-semibold text-slate-700 dark:bg-slate-700 dark:text-slate-200"
+                  >
+                    cleared
+                  </span>
+                </div>
+              </div>
+
+              <div class="flex flex-wrap items-center gap-2">
+                <span
+                  class="rounded-full px-2.5 py-1 text-xs font-bold uppercase tracking-wide"
+                  :class="badgeClass(item.task_status ?? item.status)"
+                >
+                  {{ item.task_status ?? item.status }}
+                </span>
+
+                <button
+                  type="button"
+                  class="rounded-xl px-3 py-2 text-xs font-bold transition disabled:cursor-not-allowed disabled:opacity-50"
+                  :disabled="isTaskCleared(item)"
+                  :class="(item.task_status ?? item.status) === 'done'
+                    ? 'border border-slate-300 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800'
+                    : 'bg-emerald-600 text-white hover:bg-emerald-700'"
+                  @click="toggleTodayTask(item)"
+                >
+                  {{ isTaskCleared(item)
+                    ? 'Cleared'
+                    : ((item.task_status ?? item.status) === 'done' ? 'Mark Planned' : 'Mark Done') }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div v-else class="mt-6 rounded-2xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
+          No plan generated for today.
+        </div>
+      </section>
 
       <section class="rounded-[28px] border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
-  <h3 class="text-xl font-black tracking-tight text-slate-900 dark:text-white">
-    Active Profiles
-  </h3>
-  <p class="mt-1 text-sm text-slate-600 dark:text-slate-400">
-    Aktivni kanali i njihov dnevni target.
-  </p>
+        <h3 class="text-xl font-black tracking-tight text-slate-900 dark:text-white">
+          Active Profiles
+        </h3>
+        <p class="mt-1 text-sm text-slate-600 dark:text-slate-400">
+          Active channels and their daily publishing targets.
+        </p>
 
-  <div v-if="activeProfiles.length" class="mt-6 space-y-3">
-    <div
-      v-for="profile in activeProfiles"
-      :key="profile.id"
-      class="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/60"
-    >
-      <div class="font-bold text-slate-900 dark:text-white">
-        {{ profile.name }}
-      </div>
+        <div v-if="activeProfiles.length" class="mt-6 space-y-3">
+          <div
+            v-for="profile in activeProfiles"
+            :key="profile.id"
+            class="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/60"
+          >
+            <div class="font-bold text-slate-900 dark:text-white">
+              {{ profile.name }}
+            </div>
 
-      <div class="mt-2 flex flex-wrap gap-2 text-xs">
-        <span class="rounded-full bg-slate-200 px-2.5 py-1 font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
-          {{ profile.platform }}
-        </span>
+            <div class="mt-2 flex flex-wrap gap-2 text-xs">
+              <span
+                v-if="profile.profile_name"
+                class="rounded-full bg-slate-900 px-2.5 py-1 font-semibold text-white dark:bg-white dark:text-slate-900"
+              >
+                {{ profile.profile_name }}
+              </span>
 
-        <span class="rounded-full bg-cyan-100 px-2.5 py-1 font-semibold text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300">
-          {{ profile.daily_target }} / day
-        </span>
+              <span class="rounded-full bg-slate-200 px-2.5 py-1 font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                {{ profile.platform }}
+              </span>
 
-        <span
-          v-if="profile.default_voice_tool"
-          class="rounded-full bg-violet-100 px-2.5 py-1 font-semibold text-violet-700 dark:bg-violet-900/30 dark:text-violet-300"
-        >
-          {{ profile.default_voice_tool }}
-        </span>
+              <span class="rounded-full bg-cyan-100 px-2.5 py-1 font-semibold text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300">
+                {{
+                  profile.schedule_type === 'weekly'
+                    ? `${profile.daily_target} / week`
+                    : profile.schedule_type === 'monthly'
+                      ? `${profile.daily_target} / month`
+                      : `${profile.daily_target} / day`
+                }}
+              </span>
 
-        <span
-          v-if="profile.default_publish_time"
-          class="rounded-full bg-amber-100 px-2.5 py-1 font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
-        >
-          {{ profile.default_publish_time }}
-        </span>
-      </div>
-    </div>
-  </div>
+              <span
+                v-if="profile.default_voice_tool"
+                class="rounded-full bg-violet-100 px-2.5 py-1 font-semibold text-violet-700 dark:bg-violet-900/30 dark:text-violet-300"
+              >
+                {{ profile.default_voice_tool }}
+              </span>
 
-  <div v-else class="mt-6 rounded-2xl border border-dashed border-slate-300 p-6 text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
-    Nema aktivnih publishing profila.
-  </div>
-</section>
+              <span
+                v-if="profile.publish_times?.length || profile.default_publish_time"
+                class="rounded-full bg-amber-100 px-2.5 py-1 font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
+              >
+                {{ profile.publish_times?.length ? profile.publish_times.join(' • ') : profile.default_publish_time }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div v-else class="mt-6 rounded-2xl border border-dashed border-slate-300 p-6 text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
+          No active publishing profiles.
+        </div>
+      </section>
     </div>
 
     <div class="mt-6 grid gap-6 xl:grid-cols-2">
@@ -260,7 +450,7 @@ const toggleTodayTask = (item) => {
               Coverage Insight
             </h3>
             <p class="mt-1 text-sm text-slate-600 dark:text-slate-400">
-              Da li imaš dovoljno tema za ostatak mjeseca.
+              Remaining monthly capacity compared to scheduled content.
             </p>
           </div>
         </div>
@@ -272,8 +462,8 @@ const toggleTodayTask = (item) => {
           </div>
 
           <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/60">
-            <div class="text-xs uppercase tracking-[0.15em] text-slate-500 dark:text-slate-400">Missing Topics</div>
-            <div class="mt-2 text-3xl font-black text-rose-600 dark:text-rose-400">{{ missingTopics }}</div>
+            <div class="text-xs uppercase tracking-[0.15em] text-slate-500 dark:text-slate-400">Planned Remaining</div>
+            <div class="mt-2 text-3xl font-black text-emerald-600 dark:text-emerald-400">{{ plannedRemaining }}</div>
           </div>
         </div>
 
@@ -284,126 +474,255 @@ const toggleTodayTask = (item) => {
             : 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/40 dark:bg-emerald-950/20 dark:text-emerald-300'"
         >
           <span v-if="missingTopics > 0">
-            Nedostaje još <strong>{{ missingTopics }}</strong> tema da ispuniš trenutni mjesečni target.
+            You still need <strong>{{ missingTopics }}</strong> more scheduled slots to fully cover the current month.
           </span>
           <span v-else>
-            Trenutni library pokriva planirani mjesečni target.
+            Your current schedule already covers the remaining monthly target.
           </span>
         </div>
       </section>
 
       <section class="rounded-[28px] border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
-  <div class="flex items-center justify-between gap-4">
-    <div>
-      <h3 class="text-xl font-black tracking-tight text-slate-900 dark:text-white">
-        Platform Coverage
-      </h3>
-      <p class="mt-1 text-sm text-slate-600 dark:text-slate-400">
-        Pokrivenost sadržajem po aktivnim profilima.
-      </p>
-    </div>
-  </div>
-
-  <div v-if="platformCoverage.length" class="mt-6 space-y-3">
-    <div
-      v-for="item in platformCoverage"
-      :key="item.profile_id"
-      class="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/60"
-    >
-      <div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-        <div>
-          <div class="text-base font-black text-slate-900 dark:text-white">
-            {{ item.name }}
-          </div>
-
-          <div class="mt-2 flex flex-wrap gap-2 text-xs">
-            <span class="rounded-full bg-slate-200 px-2.5 py-1 font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
-              {{ item.platform }}
-            </span>
-
-            <span class="rounded-full bg-cyan-100 px-2.5 py-1 font-semibold text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300">
-              {{ item.daily_target }} / day
-            </span>
-
-            <span class="rounded-full bg-emerald-100 px-2.5 py-1 font-semibold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
-              {{ item.coverage_days }} days coverage
-            </span>
+        <div class="flex items-center justify-between gap-4">
+          <div>
+            <h3 class="text-xl font-black tracking-tight text-slate-900 dark:text-white">
+              Content Coverage
+            </h3>
+            <p class="mt-1 text-sm text-slate-600 dark:text-slate-400">
+              Coverage by shared content bucket.
+            </p>
           </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          <div class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-center dark:border-slate-700 dark:bg-slate-900">
-            <div class="text-[11px] uppercase tracking-[0.15em] text-slate-500 dark:text-slate-400">Available</div>
-            <div class="mt-1 text-lg font-black text-slate-900 dark:text-white">{{ item.available_topics }}</div>
+        <div v-if="bucketCoverage.length" class="mt-6 space-y-3">
+  <div
+  v-for="item in bucketCoverage"
+  :key="item.content_bucket"
+  class="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/60"
+>
+  <div class="min-w-0">
+    <div class="flex flex-col gap-3">
+      <div class="min-w-0">
+        <div class="text-base font-black text-slate-900 dark:text-white">
+          {{ item.label }}
+        </div>
+
+        <div class="mt-2 flex flex-wrap items-start gap-2 text-xs">
+          <span
+            class="inline-flex max-w-full break-all rounded-lg bg-slate-200 px-2.5 py-1 font-semibold leading-5 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+          >
+            {{ item.content_bucket }}
+          </span>
+
+          <span
+            class="inline-flex rounded-lg bg-cyan-100 px-2.5 py-1 font-semibold leading-5 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300"
+          >
+            target {{ item.required }}
+          </span>
+
+          <span
+            class="inline-flex rounded-lg bg-emerald-100 px-2.5 py-1 font-semibold leading-5 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
+          >
+            planned {{ item.planned }}
+          </span>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div class="rounded-xl border border-slate-200 bg-white px-3 py-3 dark:border-slate-700 dark:bg-slate-900">
+          <div class="text-[11px] uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
+            Required
+          </div>
+          <div class="mt-1 text-2xl font-black text-slate-900 dark:text-white">
+            {{ item.required }}
+          </div>
+        </div>
+
+        <div class="rounded-xl border border-slate-200 bg-white px-3 py-3 dark:border-slate-700 dark:bg-slate-900">
+          <div class="text-[11px] uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
+            Planned
+          </div>
+          <div class="mt-1 text-2xl font-black text-slate-900 dark:text-white">
+            {{ item.planned }}
+          </div>
+        </div>
+
+        <div class="rounded-xl border border-slate-200 bg-white px-3 py-3 dark:border-slate-700 dark:bg-slate-900">
+          <div class="text-[11px] uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
+            Available
+          </div>
+          <div class="mt-1 text-2xl font-black text-slate-900 dark:text-white">
+            {{ item.available }}
+          </div>
+        </div>
+
+        <div class="rounded-xl border border-slate-200 bg-white px-3 py-3 dark:border-slate-700 dark:bg-slate-900">
+          <div class="text-[11px] uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
+            Missing
+          </div>
+          <div
+            class="mt-1 text-2xl font-black"
+            :class="item.missing > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'"
+          >
+            {{ item.missing }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+        <div v-else class="mt-6 rounded-2xl border border-dashed border-slate-300 p-6 text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
+          No content bucket coverage available.
+        </div>
+      </section>
+
+      <section class="xl:col-span-2 rounded-[28px] border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+        <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <div>
+            <h3 class="text-xl font-black tracking-tight text-slate-900 dark:text-white">
+              Upcoming Schedule
+            </h3>
+            <p class="mt-1 text-sm text-slate-600 dark:text-slate-400">
+              View scheduled items by day.
+            </p>
           </div>
 
-          <div class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-center dark:border-slate-700 dark:bg-slate-900">
-            <div class="text-[11px] uppercase tracking-[0.15em] text-slate-500 dark:text-slate-400">Coverage</div>
-            <div class="mt-1 text-lg font-black text-slate-900 dark:text-white">{{ item.coverage_days }}</div>
-          </div>
+          <div v-if="availableUpcomingDates.length" class="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <button
+              type="button"
+              @click="goToPreviousUpcomingDay"
+              class="rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+            >
+              Previous Day
+            </button>
 
-          <div class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-center dark:border-slate-700 dark:bg-slate-900">
-            <div class="text-[11px] uppercase tracking-[0.15em] text-slate-500 dark:text-slate-400">Missing</div>
-            <div class="mt-1 text-lg font-black" :class="item.missing_topics > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'">
-              {{ item.missing_topics }}
+            <input
+              v-model="selectedUpcomingDate"
+              type="date"
+              class="date-picker-contrast rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm text-slate-900 dark:border-slate-500 dark:bg-white dark:text-slate-900"
+            />
+
+            <button
+              type="button"
+              @click="goToNextUpcomingDay"
+              class="rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+            >
+              Next Day
+            </button>
+          </div>
+        </div>
+
+        <div v-if="availableUpcomingDates.length" class="mt-6">
+          <div class="mb-4 flex items-center justify-between gap-3">
+            <div class="text-sm font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
+              Selected Date
+            </div>
+
+            <div class="rounded-full bg-cyan-100 px-3 py-1 text-sm font-bold text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300">
+              {{ formatDashboardDate(selectedUpcomingDate) }}
             </div>
           </div>
+
+          <div v-if="selectedUpcomingItems.length" class="space-y-3">
+            <div
+              v-for="item in selectedUpcomingItems"
+              :key="item.id"
+              class="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/60"
+            >
+              <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <div class="font-bold text-slate-900 dark:text-white">
+                    {{ item.task_title }}
+                  </div>
+
+                  <div class="mt-2 flex flex-wrap items-start gap-2 text-xs">
+                    <span
+                      v-if="item.profile_name"
+                      class="rounded-full bg-slate-900 px-2.5 py-1 font-semibold text-white dark:bg-white dark:text-slate-900"
+                    >
+                      {{ item.profile_name }}
+                    </span>
+
+                    <span
+                      v-if="item.platform"
+                      class="rounded-full bg-slate-200 px-2.5 py-1 font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                    >
+                      {{ item.platform }}
+                    </span>
+
+                    <span
+                      v-if="item.series"
+                      class="rounded-full bg-violet-100 px-2.5 py-1 font-semibold text-violet-700 dark:bg-violet-900/30 dark:text-violet-300"
+                    >
+                      {{ item.series }}
+                    </span>
+
+                    <span
+                      v-if="item.voice_tool"
+                      class="rounded-full bg-cyan-100 px-2.5 py-1 font-semibold text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300"
+                    >
+                      {{ item.voice_tool }}
+                    </span>
+
+                    <span
+                      v-if="item.publish_time"
+                      class="rounded-full bg-amber-100 px-2.5 py-1 font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
+                    >
+                      {{ item.publish_time }}
+                    </span>
+
+                    <span
+                      v-if="item.cleared_at"
+                      class="rounded-full bg-slate-300 px-2.5 py-1 font-semibold text-slate-700 dark:bg-slate-700 dark:text-slate-200"
+                    >
+                      cleared
+                    </span>
+                  </div>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2">
+                  <span
+                    class="rounded-full px-2.5 py-1 text-xs font-bold uppercase tracking-wide"
+                    :class="badgeClass(item.task_status || item.status)"
+                  >
+                    {{ item.task_status || item.status }}
+                  </span>
+
+                  <button
+                    type="button"
+                    class="rounded-xl px-3 py-2 text-xs font-bold transition disabled:cursor-not-allowed disabled:opacity-50"
+                    :disabled="isTaskCleared(item)"
+                    :class="(item.task_status ?? item.status) === 'done'
+                      ? 'border border-slate-300 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800'
+                      : 'bg-emerald-600 text-white hover:bg-emerald-700'"
+                    @click="toggleUpcomingTask(item)"
+                  >
+                    {{ isTaskCleared(item)
+                      ? 'Cleared'
+                      : ((item.task_status ?? item.status) === 'done' ? 'Mark Planned' : 'Mark Done') }}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div
+            v-else
+            class="rounded-2xl border border-dashed border-slate-300 p-6 text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400"
+          >
+            No scheduled items for this date.
+          </div>
         </div>
-      </div>
-    </div>
-  </div>
 
-  <div v-else class="mt-6 rounded-2xl border border-dashed border-slate-300 p-6 text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
-    Nema aktivnih profila za coverage prikaz.
-  </div>
-</section>
-
-      <section class="rounded-[28px] border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
-  <div class="flex items-center justify-between gap-4">
-    <div>
-      <h3 class="text-xl font-black tracking-tight text-slate-900 dark:text-white">
-        Upcoming Plan
-      </h3>
-      <p class="mt-1 text-sm text-slate-600 dark:text-slate-400">
-        Sljedeće stavke iz plana.
-      </p>
-    </div>
-  </div>
-
-  <div v-if="upcomingPlan.length" class="mt-6 space-y-3">
-    <div
-      v-for="item in upcomingPlan"
-      :key="item.id"
-      class="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/60"
-    >
-      <div class="font-bold text-slate-900 dark:text-white">
-        {{ item.task_title }}
-      </div>
-
-      <div class="mt-2 flex flex-wrap gap-2 text-xs">
-        <span class="rounded-full bg-slate-200 px-2.5 py-1 font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
-          {{ item.plan_date }}
-        </span>
-
-        <span v-if="item.platform" class="rounded-full bg-cyan-100 px-2.5 py-1 font-semibold text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300">
-          {{ item.platform }}
-        </span>
-
-        <span v-if="item.series" class="rounded-full bg-violet-100 px-2.5 py-1 font-semibold text-violet-700 dark:bg-violet-900/30 dark:text-violet-300">
-          {{ item.series }}
-        </span>
-
-        <span v-if="item.publish_time" class="rounded-full bg-amber-100 px-2.5 py-1 font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
-          {{ item.publish_time }}
-        </span>
-      </div>
-    </div>
-  </div>
-
-  <div v-else class="mt-6 rounded-2xl border border-dashed border-slate-300 p-6 text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
-    Nema narednih stavki plana.
-  </div>
-</section>
+        <div
+          v-else
+          class="mt-6 rounded-2xl border border-dashed border-slate-300 p-6 text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400"
+        >
+          No upcoming plan items.
+        </div>
+      </section>
     </div>
 
     <div class="mt-6 grid gap-6 xl:grid-cols-2">
@@ -411,6 +730,9 @@ const toggleTodayTask = (item) => {
         <h3 class="text-xl font-black tracking-tight text-slate-900 dark:text-white">
           Late Tasks
         </h3>
+        <p class="mt-1 text-sm text-slate-600 dark:text-slate-400">
+          Overdue tasks that still need attention.
+        </p>
 
         <div v-if="lateTasks.length" class="mt-6 space-y-3">
           <div
@@ -418,47 +740,140 @@ const toggleTodayTask = (item) => {
             :key="task.id"
             class="rounded-2xl border border-rose-200 bg-rose-50 p-4 dark:border-rose-900/40 dark:bg-rose-950/20"
           >
-            <div class="font-bold text-slate-900 dark:text-white">
-              {{ task.title }}
-            </div>
-            <div class="mt-1 text-sm text-slate-600 dark:text-slate-400">
-              {{ task.scheduled_for }}
+            <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <div class="text-base font-bold text-slate-900 dark:text-white">
+                  {{ task.title }}
+                </div>
+
+                <span
+                  v-if="task.profile_name"
+                  class="rounded-full bg-slate-900 px-2.5 py-1 font-semibold text-white dark:bg-white dark:text-slate-900"
+                >
+                  {{ task.profile_name }}
+                </span>
+
+                <div class="mt-2 flex flex-wrap gap-2 text-xs">
+                  <span
+                    v-if="task.platform"
+                    class="rounded-full bg-slate-200 px-2.5 py-1 font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                  >
+                    {{ task.platform }}
+                  </span>
+
+                  <span
+                    v-if="task.series"
+                    class="rounded-full bg-violet-100 px-2.5 py-1 font-semibold text-violet-700 dark:bg-violet-900/30 dark:text-violet-300"
+                  >
+                    {{ task.series }}
+                  </span>
+
+                  <span
+                    v-if="task.voice_tool"
+                    class="rounded-full bg-cyan-100 px-2.5 py-1 font-semibold text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300"
+                  >
+                    {{ task.voice_tool }}
+                  </span>
+
+                  <span
+                    v-if="task.scheduled_for"
+                    class="rounded-full bg-slate-100 px-2.5 py-1 font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                  >
+                    {{ formatDashboardDate(task.scheduled_for) }}
+                  </span>
+
+                  <span
+                    v-if="task.publish_time"
+                    class="rounded-full bg-amber-100 px-2.5 py-1 font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
+                  >
+                    {{ task.publish_time }}
+                  </span>
+
+                  <span
+                    v-if="task.cleared_at"
+                    class="rounded-full bg-slate-300 px-2.5 py-1 font-semibold text-slate-700 dark:bg-slate-700 dark:text-slate-200"
+                  >
+                    cleared
+                  </span>
+                </div>
+              </div>
+
+              <div class="flex flex-wrap items-center gap-2">
+                <span
+                  class="rounded-full px-2.5 py-1 text-xs font-bold uppercase tracking-wide"
+                  :class="badgeClass(task.status)"
+                >
+                  {{ task.status }}
+                </span>
+
+                <button
+                  type="button"
+                  class="rounded-xl px-3 py-2 text-xs font-bold transition disabled:cursor-not-allowed disabled:opacity-50"
+                  :disabled="!!task.cleared_at"
+                  :class="task.status === 'done'
+                    ? 'border border-slate-300 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800'
+                    : 'bg-emerald-600 text-white hover:bg-emerald-700'"
+                  @click="toggleLateTask(task)"
+                >
+                  {{ task.cleared_at
+                    ? 'Cleared'
+                    : (task.status === 'done' ? 'Mark Planned' : 'Mark Done') }}
+                </button>
+              </div>
             </div>
           </div>
         </div>
 
         <div v-else class="mt-6 rounded-2xl border border-dashed border-slate-300 p-6 text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
-          Nema zakašnjelih taskova.
+          No late tasks.
         </div>
       </section>
 
       <section class="rounded-[28px] border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
         <h3 class="text-xl font-black tracking-tight text-slate-900 dark:text-white">
-          Library Status
+          Library Overview
         </h3>
+        <p class="mt-1 text-sm text-slate-600 dark:text-slate-400">
+          Current content library status across all buckets.
+        </p>
 
         <div class="mt-6 grid gap-4 sm:grid-cols-4">
           <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/60">
-            <div class="text-xs uppercase tracking-[0.15em] text-slate-500 dark:text-slate-400">CS2</div>
-            <div class="mt-2 text-3xl font-black text-slate-900 dark:text-white">{{ libraryStats.cs2 }}</div>
+            <div class="text-xs uppercase tracking-[0.15em] text-slate-500 dark:text-slate-400">Available</div>
+            <div class="mt-2 text-3xl font-black text-slate-900 dark:text-white">{{ libraryOverview.available }}</div>
           </div>
 
           <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/60">
-            <div class="text-xs uppercase tracking-[0.15em] text-slate-500 dark:text-slate-400">FB</div>
-            <div class="mt-2 text-3xl font-black text-slate-900 dark:text-white">{{ libraryStats.fb }}</div>
+            <div class="text-xs uppercase tracking-[0.15em] text-slate-500 dark:text-slate-400">Planned</div>
+            <div class="mt-2 text-3xl font-black text-cyan-600 dark:text-cyan-400">{{ libraryOverview.planned }}</div>
           </div>
 
           <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/60">
-            <div class="text-xs uppercase tracking-[0.15em] text-slate-500 dark:text-slate-400">WORLD</div>
-            <div class="mt-2 text-3xl font-black text-slate-900 dark:text-white">{{ libraryStats.world }}</div>
+            <div class="text-xs uppercase tracking-[0.15em] text-slate-500 dark:text-slate-400">Completed</div>
+            <div class="mt-2 text-3xl font-black text-emerald-600 dark:text-emerald-400">{{ libraryOverview.completed }}</div>
           </div>
 
           <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/60">
-            <div class="text-xs uppercase tracking-[0.15em] text-slate-500 dark:text-slate-400">GENERAL</div>
-            <div class="mt-2 text-3xl font-black text-slate-900 dark:text-white">{{ libraryStats.general }}</div>
+            <div class="text-xs uppercase tracking-[0.15em] text-slate-500 dark:text-slate-400">Archived</div>
+            <div class="mt-2 text-3xl font-black text-slate-900 dark:text-white">{{ libraryOverview.archived }}</div>
           </div>
         </div>
       </section>
     </div>
   </TodoLayout>
 </template>
+
+<style scoped>
+.date-picker-contrast {
+  color-scheme: light;
+}
+
+.date-picker-contrast::-webkit-calendar-picker-indicator {
+  opacity: 1;
+  cursor: pointer;
+}
+
+.dark .date-picker-contrast::-webkit-calendar-picker-indicator {
+  filter: none;
+}
+</style>

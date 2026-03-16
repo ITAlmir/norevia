@@ -2,6 +2,17 @@
 import { Head, Link, usePage } from '@inertiajs/vue3'
 import { computed } from 'vue'
 import MainLayout from '@/Layouts/MainLayout.vue'
+import ConfirmModal from '@/Components/ConfirmModal.vue'
+import ToastMessage from '@/Components/ToastMessage.vue'
+import { useUiFeedback } from '@/Composables/useUiFeedback'
+
+const {
+  confirmState,
+  toastState,
+  closeConfirm,
+  confirmYes,
+  closeToast,
+} = useUiFeedback()
 
 const page = usePage()
 
@@ -95,4 +106,21 @@ const currentPath = computed(() => page.url || '')
       </div>
     </div>
   </MainLayout>
+  <ConfirmModal
+  :open="confirmState.open"
+  :title="confirmState.title"
+  :message="confirmState.message"
+  :confirm-label="confirmState.confirmLabel"
+  :cancel-label="confirmState.cancelLabel"
+  :danger="confirmState.danger"
+  @confirm="confirmYes"
+  @close="closeConfirm"
+/>
+
+<ToastMessage
+  :open="toastState.open"
+  :message="toastState.message"
+  :type="toastState.type"
+  @close="closeToast"
+/>
 </template>

@@ -4,126 +4,162 @@ namespace App\Http\Controllers\Todo;
 
 use App\Http\Controllers\Controller;
 use App\Models\ContentTopic;
+use App\Models\MonthlyPlanItem;
+use App\Models\PublishingProfile;
+use App\Models\TodoTask;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class ContentLibraryController extends Controller
 {
     public function index()
-{
-    $user = auth()->user();
+    {
+        $user = auth()->user();
 
-    $topics = ContentTopic::query()
-    ->where('user_id', $user->id)
-    ->latest('id')
-    ->get([
-        'id',
-        'category',
-        'platform',
-        'series',
-        'topic_code',
-        'title',
-        'voice_tool',
-        'caption',
-        'description',
-        'hashtags',
-        'script_notes',
-        'status',
-        'created_at',
-    ]);
+        $topics = ContentTopic::query()
+            ->where('user_id', $user->id)
+            ->latest('id')
+            ->get([
+                'id',
+                'category',
+                'platform',
+                'series',
+                'topic_code',
+                'title',
+                'voice_tool',
+                'content_bucket',
+                'shared_content_group',
+                'caption',
+                'description',
+                'hashtags',
+                'script_notes',
+                'status',
+                'created_at',
+            ]);
 
-    return Inertia::render('Todo/Library/Index', [
-        'topics' => $topics,
-    ]);
-}
+        $profiles = PublishingProfile::query()
+            ->where('user_id', $user->id)
+            ->where('is_active', true)
+            ->latest('id')
+            ->get([
+                'id',
+                'name',
+                'platform',
+                'daily_target',
+                'default_voice_tool',
+                'default_publish_time',
+                'publish_times',
+                'schedule_type',
+                'schedule_days',
+                'description',
+                'use_shared_content',
+                'content_group',
+                'content_bucket',
+                'is_active',
+            ]);
+
+        return Inertia::render('Todo/Library/Index', [
+            'topics' => $topics,
+            'profiles' => $profiles,
+        ]);
+    }
+
+    public function previewImport(Request $request)
+    {
+        $request->validate([
+            'bulk_input' => ['required', 'string'],
+        ]);
+
+        $preview = $this->parseBulkInput($request->bulk_input, auth()->id());
+
+        return response()->json($preview);
+    }
 
     public function store(Request $request)
-{
-    $request->validate([
-        'bulk_input' => ['required', 'string'],
-    ]);
+    {
+        $request->validate([
+            'bulk_input' => ['required', 'string'],
+            'allowed_warning_titles' => ['nullable', 'array'],
+            'allowed_warning_titles.*' => ['string'],
+        ]);
 
-    $lines = preg_split('/\r\n|\r|\n/', trim($request->bulk_input));
-    $rowsToInsert = [];
+        $allowedWarningTitles = collect($request->input('allowed_warning_titles', []))
+            ->map(fn ($title) => trim((string) $title))
+            ->filter()
+            ->values()
+            ->all();
 
-    foreach ($lines as $line) {
-        $line = trim($line);
+        $preview = $this->parseBulkInput($request->bulk_input, auth()->id());
 
-        if ($line === '') {
-            continue;
+        $rowsToInsert = collect($preview['ready_rows'])
+            ->filter(function ($row) use ($allowedWarningTitles) {
+                if (!($row['historical_warning'] ?? false)) {
+                    return true;
+                }
+
+                return in_array($row['title'], $allowedWarningTitles, true);
+            })
+            ->map(function ($row) {
+                unset($row['historical_warning'], $row['previously_used_at']);
+                return $row;
+            })
+            ->values()
+            ->all();
+
+        if (!empty($rowsToInsert)) {
+            ContentTopic::insert($rowsToInsert);
         }
 
-        $parts = array_map('trim', explode('|', $line));
+        return back();
+    }
 
-        $platform = !empty($parts[0]) ? strtolower(trim($parts[0])) : null;
-        $series = !empty($parts[1]) ? strtolower(trim($parts[1])) : null;
-        $voiceTool = $parts[2] ?? null;
-        $title = $parts[3] ?? null;
+    public function update(Request $request, ContentTopic $topic)
+    {
+        abort_if($topic->user_id !== auth()->id(), 403);
 
-        $caption = $parts[4] ?? null;
-        $description = $parts[5] ?? null;
-        $hashtags = $parts[6] ?? null;
-        $scriptNotes = $parts[7] ?? null;
+        $data = $request->validate([
+            'title' => ['sometimes', 'required', 'string', 'max:255'],
+            'platform' => ['nullable', 'string', 'max:100'],
+            'series' => ['nullable', 'string', 'max:100'],
+            'voice_tool' => ['nullable', 'string', 'max:100'],
+            'content_bucket' => ['nullable', 'string', 'max:150'],
+            'caption' => ['nullable', 'string'],
+            'description' => ['nullable', 'string'],
+            'hashtags' => ['nullable', 'string'],
+            'script_notes' => ['nullable', 'string'],
+            'status' => ['nullable', 'in:available,used,archived'],
+        ]);
 
-        if (!$title) {
-            continue;
+        if (array_key_exists('platform', $data) && $data['platform']) {
+            $data['platform'] = strtolower(trim($data['platform']));
         }
 
-        $category = $this->detectCategory($platform, $series, $title);
+        if (array_key_exists('series', $data) && $data['series']) {
+            $data['series'] = strtolower(trim($data['series']));
+        }
 
-        $topicCode = $platform && $series
+        $platform = $data['platform'] ?? $topic->platform;
+        $series = $data['series'] ?? $topic->series;
+        $title = $data['title'] ?? $topic->title;
+        $bucket = $data['content_bucket'] ?? $topic->content_bucket;
+
+        $data['category'] = $this->detectCategory($platform, $series, $title, $bucket);
+        $data['topic_code'] = $platform && $series
             ? "{$platform}#{$series}"
             : ($series ?: $title);
 
-        $rowsToInsert[] = [
-            'user_id' => auth()->id(),
-            'category' => $category,
-            'platform' => $platform,
-            'series' => $series,
-            'topic_code' => $topicCode,
-            'title' => $title,
-            'voice_tool' => $voiceTool,
-            'status' => 'available',
-            'caption' => $caption,
-            'description' => $description,
-            'hashtags' => $hashtags,
-            'script_notes' => $scriptNotes,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ];
+        if (!empty($bucket)) {
+            $data['shared_content_group'] = PublishingProfile::query()
+                ->where('user_id', auth()->id())
+                ->where('content_bucket', $bucket)
+                ->whereNotNull('content_group')
+                ->value('content_group');
+        }
+
+        $topic->update($data);
+
+        return back();
     }
-
-    if (!empty($rowsToInsert)) {
-        ContentTopic::insert($rowsToInsert);
-    }
-
-    return redirect()->route('todo.library.index');
-}
-
-    public function update(Request $request, ContentTopic $topic)
-{
-    abort_if($topic->user_id !== auth()->id(), 403);
-
-    $data = $request->validate([
-        'title' => ['sometimes', 'required', 'string', 'max:255'],
-        'platform' => ['nullable', 'string', 'max:100'],
-        'series' => ['nullable', 'string', 'max:100'],
-        'voice_tool' => ['nullable', 'string', 'max:100'],
-        'caption' => ['nullable', 'string'],
-        'description' => ['nullable', 'string'],
-        'hashtags' => ['nullable', 'string'],
-        'script_notes' => ['nullable', 'string'],
-        'status' => ['nullable', 'in:available,used,archived'],
-    ]);
-
-    if (isset($data['platform']) && $data['platform'] !== null) {
-        $data['platform'] = strtolower($data['platform']);
-    }
-
-    $topic->update($data);
-
-    return redirect()->route('todo.library.index');
-}
 
     public function destroy(ContentTopic $topic)
     {
@@ -131,29 +167,343 @@ class ContentLibraryController extends Controller
 
         $topic->delete();
 
-        return redirect()->route('todo.library.index');
+        return back();
     }
 
-    private function detectCategory(?string $platform, ?string $series, ?string $title): string
+    public function clearAvailable()
     {
-        $haystack = strtolower(trim(($platform ?? '') . ' ' . ($series ?? '') . ' ' . ($title ?? '')));
+        ContentTopic::query()
+            ->where('user_id', auth()->id())
+            ->where('status', 'available')
+            ->delete();
 
-        if (str_contains($haystack, 'cs2')) {
+        return back();
+    }
+
+    public function resetActiveWorkflow()
+    {
+        $userId = auth()->id();
+
+        TodoTask::query()
+            ->where('user_id', $userId)
+            ->whereIn('status', ['pending', 'late'])
+            ->delete();
+
+        MonthlyPlanItem::query()
+            ->where('user_id', $userId)
+            ->where(function ($query) {
+                $query->whereNull('status')
+                    ->orWhere('status', '!=', 'done');
+            })
+            ->delete();
+
+        ContentTopic::query()
+            ->where('user_id', $userId)
+            ->where('status', 'available')
+            ->delete();
+
+        return back();
+    }
+
+    private function parseBulkInput(string $bulkInput, int $userId): array
+    {
+        $lines = preg_split('/\r\n|\r|\n/', trim($bulkInput));
+
+        $readyRows = [];
+        $skippedDuplicates = [];
+        $historicalWarnings = [];
+        $batchKeys = [];
+
+        foreach ($lines as $line) {
+            $line = trim($line);
+
+            if ($line === '') {
+                continue;
+            }
+
+            $parsed = $this->parseBulkLine($line);
+
+            if (!$parsed || empty($parsed['title'])) {
+                    continue;
+                }
+
+            $batchKey = strtolower(
+                    trim(
+                        ($parsed['content_bucket'] ?: '__no_bucket__') . '|' .
+                        ($parsed['platform'] ?? '') . '|' .
+                        ($parsed['title'] ?? '')
+                    )
+                );
+
+            if (in_array($batchKey, $batchKeys, true)) {
+                $skippedDuplicates[] = [
+                    'title' => $parsed['title'],
+                    'platform' => $parsed['platform'],
+                    'content_bucket' => $parsed['content_bucket'],
+                ];
+                continue;
+            }
+
+            $batchKeys[] = $batchKey;
+
+            $normalizedBucket = strtolower((string) $parsed['content_bucket']);
+            $normalizedPlatform = strtolower((string) $parsed['platform']);
+            $normalizedTitle = strtolower((string) $parsed['title']);
+
+            $existingTopicQuery = ContentTopic::query()
+                ->where('user_id', $userId)
+                ->whereRaw('LOWER(platform) = ?', [$normalizedPlatform])
+                ->whereRaw('LOWER(title) = ?', [$normalizedTitle]);
+
+            $existingPlanItemQuery = MonthlyPlanItem::query()
+                ->where('user_id', $userId)
+                ->whereRaw('LOWER(platform) = ?', [$normalizedPlatform])
+                ->whereRaw('LOWER(task_title) = ?', [$normalizedTitle]);
+
+            $existingTaskQuery = TodoTask::query()
+                ->where('user_id', $userId)
+                ->whereRaw('LOWER(platform) = ?', [$normalizedPlatform])
+                ->whereRaw('LOWER(title) = ?', [$normalizedTitle]);
+
+            if (!empty($normalizedBucket)) {
+                $existingTopicQuery->whereRaw('LOWER(content_bucket) = ?', [$normalizedBucket]);
+                $existingPlanItemQuery->whereRaw('LOWER(content_bucket) = ?', [$normalizedBucket]);
+                $existingTaskQuery->whereRaw('LOWER(content_bucket) = ?', [$normalizedBucket]);
+            }
+
+            $existingTopic = $existingTopicQuery
+                ->orderByDesc('created_at')
+                ->first([
+                    'id',
+                    'title',
+                    'created_at',
+                    'status',
+                ]);
+
+            $existingPlanItem = $existingPlanItemQuery
+                ->orderByDesc('created_at')
+                ->first([
+                    'id',
+                    'task_title',
+                    'created_at',
+                    'status',
+                ]);
+
+            $existingTask = $existingTaskQuery
+                ->orderByDesc('created_at')
+                ->first([
+                    'id',
+                    'title',
+                    'created_at',
+                    'status',
+                ]);
+
+            $existing = $existingTopic ?: ($existingPlanItem ?: $existingTask);
+
+            $row = [
+                'user_id' => $userId,
+                'category' => $this->detectCategory(
+                    $parsed['platform'],
+                    $parsed['series'],
+                    $parsed['title'],
+                    $parsed['content_bucket']
+                ),
+                'platform' => $parsed['platform'],
+                'series' => $parsed['series'],
+                'topic_code' => $parsed['platform'] && $parsed['series']
+                    ? "{$parsed['platform']}#{$parsed['series']}"
+                    : ($parsed['series'] ?: $parsed['title']),
+                'title' => $parsed['title'],
+                'voice_tool' => $parsed['voice_tool'],
+                'content_bucket' => $parsed['content_bucket'],
+                'shared_content_group' => PublishingProfile::query()
+                    ->where('user_id', $userId)
+                    ->where('content_bucket', $parsed['content_bucket'])
+                    ->whereNotNull('content_group')
+                    ->value('content_group'),
+                'status' => 'available',
+                'caption' => $parsed['caption'],
+                'description' => $parsed['description'],
+                'hashtags' => $parsed['hashtags'],
+                'script_notes' => $parsed['script_notes'],
+                'created_at' => now(),
+                'updated_at' => now(),
+                'historical_warning' => false,
+                'previously_used_at' => null,
+            ];
+
+            if ($existing) {
+                $row['historical_warning'] = true;
+                $row['previously_used_at'] = optional($existing->created_at)->toDateString();
+
+                $historicalWarnings[] = [
+                    'title' => $parsed['title'],
+                    'platform' => $parsed['platform'],
+                    'content_bucket' => $parsed['content_bucket'],
+                    'previously_used_at' => optional($existing->created_at)->toDateString(),
+                    'previous_status' => $existing->status ?? null,
+                ];
+            }
+
+            $readyRows[] = $row;
+        }
+
+        return [
+            'ready_rows' => $readyRows,
+            'summary' => [
+                'parsed_count' => count($readyRows),
+                'skipped_duplicates_count' => count($skippedDuplicates),
+                'historical_warnings_count' => count($historicalWarnings),
+                'safe_import_count' => collect($readyRows)->where('historical_warning', false)->count(),
+            ],
+            'skipped_duplicates' => array_values($skippedDuplicates),
+            'historical_warnings' => array_values($historicalWarnings),
+        ];
+    }
+
+    private function parseBulkLine(string $line): ?array
+{
+    $parts = array_map('trim', explode('|', $line));
+    $count = count($parts);
+
+    $platform = null;
+    $series = null;
+    $voiceTool = null;
+    $contentBucket = null;
+    $title = null;
+    $caption = null;
+    $description = null;
+    $hashtags = null;
+    $scriptNotes = null;
+
+    // NEW shortest: platform|series|content_bucket|title
+    if ($count === 4) {
+        $platform = !empty($parts[0]) ? strtolower(trim($parts[0])) : null;
+        $series = !empty($parts[1]) ? strtolower(trim($parts[1])) : null;
+
+        // Heuristic:
+        // if third part looks like bucket -> treat as new format
+        // otherwise treat as OLD short format: platform|series|voice_tool|title
+        if ($this->looksLikeContentBucket($parts[2] ?? null)) {
+            $contentBucket = $parts[2] ?? null;
+            $title = $parts[3] ?? null;
+        } else {
+            $voiceTool = $parts[2] ?? null;
+            $title = $parts[3] ?? null;
+        }
+    }
+
+    // NEW short: platform|series|voice_tool|content_bucket|title
+    if ($count === 5) {
+        $platform = !empty($parts[0]) ? strtolower(trim($parts[0])) : null;
+        $series = !empty($parts[1]) ? strtolower(trim($parts[1])) : null;
+        $voiceTool = $parts[2] ?? null;
+        $contentBucket = $parts[3] ?? null;
+        $title = $parts[4] ?? null;
+    }
+
+    // NEW medium: platform|series|voice_tool|content_bucket|title|caption
+    if ($count === 6) {
+        $platform = !empty($parts[0]) ? strtolower(trim($parts[0])) : null;
+        $series = !empty($parts[1]) ? strtolower(trim($parts[1])) : null;
+
+        // Legacy medium fallback:
+        // platform|series|voice_tool|title|caption|description
+        if ($this->looksLikeContentBucket($parts[3] ?? null)) {
+            $voiceTool = $parts[2] ?? null;
+            $contentBucket = $parts[3] ?? null;
+            $title = $parts[4] ?? null;
+            $caption = $parts[5] ?? null;
+        } else {
+            $voiceTool = $parts[2] ?? null;
+            $title = $parts[3] ?? null;
+            $caption = $parts[4] ?? null;
+            $description = $parts[5] ?? null;
+        }
+    }
+
+    // OLD long: platform|series|voice_tool|title|caption|description|hashtags
+    if ($count === 7) {
+        $platform = !empty($parts[0]) ? strtolower(trim($parts[0])) : null;
+        $series = !empty($parts[1]) ? strtolower(trim($parts[1])) : null;
+        $voiceTool = $parts[2] ?? null;
+        $title = $parts[3] ?? null;
+        $caption = $parts[4] ?? null;
+        $description = $parts[5] ?? null;
+        $hashtags = $parts[6] ?? null;
+    }
+
+    // NEW long: platform|series|voice_tool|content_bucket|title|caption|description|hashtags
+    if ($count >= 8) {
+        $platform = !empty($parts[0]) ? strtolower(trim($parts[0])) : null;
+        $series = !empty($parts[1]) ? strtolower(trim($parts[1])) : null;
+        $voiceTool = $parts[2] ?? null;
+        $contentBucket = $parts[3] ?? null;
+        $title = $parts[4] ?? null;
+        $caption = $parts[5] ?? null;
+        $description = $parts[6] ?? null;
+        $hashtags = $parts[7] ?? null;
+        $scriptNotes = $parts[8] ?? null;
+    }
+
+    return [
+        'platform' => $platform,
+        'series' => $series,
+        'voice_tool' => $voiceTool,
+        'content_bucket' => !empty($contentBucket) ? trim((string) $contentBucket) : null,
+        'title' => !empty($title) ? trim((string) $title) : null,
+        'caption' => !empty($caption) ? trim((string) $caption) : null,
+        'description' => !empty($description) ? trim((string) $description) : null,
+        'hashtags' => !empty($hashtags) ? trim((string) $hashtags) : null,
+        'script_notes' => !empty($scriptNotes) ? trim((string) $scriptNotes) : null,
+    ];
+}
+
+private function looksLikeContentBucket(?string $value): bool
+{
+    $value = trim((string) $value);
+
+    if ($value === '') {
+        return false;
+    }
+
+    // content bucket usually looks like slug-ish profile bucket:
+    // norevia-world-4821, gaming-norevia-7314, etc.
+    // voice tools like TTSMaker / ElevenLabs usually don't match this shape
+    return (bool) preg_match('/^[a-z0-9]+(?:-[a-z0-9]+){1,}$/', strtolower($value));
+}
+
+    private function detectCategory(?string $platform, ?string $series, ?string $title, ?string $contentBucket = null): string
+    {
+        $platform = strtolower((string) $platform);
+        $series = strtolower((string) $series);
+        $title = strtolower((string) $title);
+        $contentBucket = strtolower((string) $contentBucket);
+
+        if (
+            str_contains($contentBucket, 'gaming') ||
+            str_contains($series, 'cs2') ||
+            str_contains($title, 'cs2')
+        ) {
             return 'cs2';
         }
 
         if (
-            str_contains($haystack, 'svijet40') ||
-            str_contains($haystack, 'fb') ||
-            str_contains($haystack, 'facebook')
+            str_contains($contentBucket, 'balkan') ||
+            str_contains($platform, 'facebook') ||
+            $platform === 'fb' ||
+            str_contains($series, 'svijet40') ||
+            str_contains($series, 'balkan')
         ) {
             return 'fb';
         }
 
         if (
-            str_contains($haystack, 'world') ||
-            str_contains($haystack, 'fact') ||
-            str_contains($haystack, 'place')
+            str_contains($contentBucket, 'world') ||
+            str_contains($series, 'world') ||
+            str_contains($series, 'fact') ||
+            str_contains($series, 'place') ||
+            str_contains($title, 'world')
         ) {
             return 'world';
         }
