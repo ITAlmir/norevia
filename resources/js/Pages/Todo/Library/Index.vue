@@ -28,6 +28,7 @@ const allowHistoricalWarnings = ref(false)
 const previewConfirmed = ref(false)
 const importMode = ref('idle')
 const importPreviewRef = ref(null)
+const invalidRowsRef = ref(null)
 
 const editForm = useForm({
   title: '',
@@ -73,15 +74,16 @@ const submitBulk = async () => {
   const preview = await runImportPreview()
   if (!preview) return
 
-  const hasDuplicates = (preview.summary?.skipped_duplicates_count || 0) > 0
-  const hasWarnings = (preview.summary?.historical_warnings_count || 0) > 0
+  const hasInvalidRows = (preview.summary?.invalid_rows_count || 0) > 0
+const hasDuplicates = (preview.summary?.skipped_duplicates_count || 0) > 0
+const hasWarnings = (preview.summary?.historical_warnings_count || 0) > 0
 
-  if (hasDuplicates || hasWarnings) {
-    importMode.value = 'review'
-    showToast('Review the import result, then confirm import.', 'success')
-    await scrollToImportPreview()
-    return
-  }
+if (hasInvalidRows || hasDuplicates || hasWarnings) {
+  importMode.value = 'review'
+  showToast('Review the import result, then confirm import.', 'success')
+  await scrollToImportIssues()
+  return
+}
 
   confirmImport()
 }
@@ -379,6 +381,25 @@ const scrollToImportPreview = async () => {
     behavior: 'smooth',
     block: 'center',
   })
+}
+
+const scrollToImportIssues = async () => {
+  await nextTick()
+
+  if (importPreview.value?.invalid_rows?.length && invalidRowsRef.value) {
+    invalidRowsRef.value.scrollIntoView({
+      behavior: 'smooth',
+      block: 'center',
+    })
+    return
+  }
+
+  if (importPreview.value?.historical_warnings?.length && importPreviewRef.value) {
+    importPreviewRef.value.scrollIntoView({
+      behavior: 'smooth',
+      block: 'center',
+    })
+  }
 }
 
 const confirmImport = () => {
@@ -696,15 +717,16 @@ watch(
 
               <div
   v-if="importPreview.invalid_rows?.length"
+  ref="invalidRowsRef"
   class="mt-4 rounded-2xl border border-rose-200 bg-rose-50 p-4 dark:border-rose-900/40 dark:bg-rose-950/20"
 >
   <div class="text-sm font-black text-rose-700 dark:text-rose-300">
     Some rows need a quick fix
   </div>
 
-  <p class="mt-2 text-sm leading-6 text-rose-700 dark:text-rose-300">
-    Nothing is broken — just check the rows below and try again.
-  </p>
+  <p class="mt-2 text-sm leading-6 text-rose-700 dark:text-amber-300">
+  Nothing is broken — just check the rows below and try again.
+</p>
 
   <div class="mt-4 space-y-3">
     <div
@@ -720,9 +742,9 @@ watch(
         {{ item.line }}
       </div>
 
-      <div class="mt-3 text-sm font-semibold text-rose-700 dark:text-rose-300">
-        {{ item.reason }}
-      </div>
+      <div class="mt-3 text-sm font-semibold text-rose-700 dark:text-amber-300">
+  {{ item.reason }}
+</div>
     </div>
   </div>
 
@@ -730,13 +752,14 @@ watch(
     <div class="text-sm font-black text-slate-900 dark:text-white">
       Need help fixing the rows?
     </div>
-    <p class="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-400">
-      Copy the problematic rows into ChatGPT and ask it to return only corrected bulk import lines.
-    </p>
+    <p class="mt-2 text-sm leading-6 text-slate-600 dark:text-amber-200">
+  Copy the problematic rows into ChatGPT and ask it to return only corrected bulk import lines.
+</p>
+
     <button
       type="button"
       @click="copyInvalidRowsPrompt"
-      class="mt-3 rounded-xl bg-rose-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-rose-700"
+      class="mt-3 rounded-xl border border-cyan-300 px-4 py-2 text-sm font-bold text-cyan-700 transition hover:bg-cyan-50 dark:border-cyan-800 dark:text-cyan-300 dark:hover:bg-cyan-950/30"
     >
       Copy ChatGPT Fix Prompt
     </button>

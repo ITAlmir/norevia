@@ -41,7 +41,7 @@ class HandleInertiaRequests extends Middleware
                 'message' => $request->session()->get('message'),
                 'success' => $request->session()->get('success'),
                 'error' => $request->session()->get('error'),
-            ],
+            ],           
         ];
 
         // Dodaj ziggy samo ako postoji
@@ -50,14 +50,8 @@ class HandleInertiaRequests extends Middleware
                 ...(new \Tighten\Ziggy\Ziggy)->toArray(),
                 'location' => $request->url(),
             ];
-        }
+        }   
 
-        return array_merge(parent::share($request), [
-    'flash' => [
-        'success' => fn () => $request->session()->get('success'),
-        'error' => fn () => $request->session()->get('error'),
-        'importPreview' => fn () => $request->session()->get('import_preview'),
-    ],
-]);
+return array_merge(parent::share($request), $sharedProps);
     }
 }
