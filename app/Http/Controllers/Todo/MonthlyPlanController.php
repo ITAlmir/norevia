@@ -168,43 +168,118 @@ class MonthlyPlanController extends Controller
         }
 
         $cursor->addDay();
-    }
+}
 
-    return redirect()->route('todo.monthly-plan.index');
+$cursor = $startDate->copy();
+
+while ($cursor->lte($endDate)) {
+    $this->syncTasksForDate($user->id, $cursor->toDateString());
+    $cursor->addDay();
+}
+
+return redirect()->route('todo.monthly-plan.index');
 }
     
 
     public function toggleItemStatus(MonthlyPlanItem $item, Request $request)
-    {
-        abort_if($item->user_id !== auth()->id(), 403);
+{
+    abort_if($item->user_id !== auth()->id(), 403);
 
-        $data = $request->validate([
-            'status' => ['required', 'in:planned,done'],
-        ]);
+    $data = $request->validate([
+        'status' => ['required', 'in:planned,done,used,skipped'],
+    ]);
 
+    $requestedStatus = $data['status'];
+
+    $task = TodoTask::query()
+        ->where('user_id', auth()->id())
+        ->where('plan_item_id', $item->id)
+        ->first();
+
+    // USED = published / archived
+    if ($requestedStatus === 'used') {
         $item->update([
-            'status' => $data['status'],
+            'status' => 'done',
         ]);
 
         if ($item->contentTopic) {
             $item->contentTopic->update([
-                'status' => $data['status'] === 'done' ? 'used' : 'available',
+                'status' => 'used',
             ]);
         }
 
-        $existingTask = TodoTask::query()
-            ->where('user_id', auth()->id())
-            ->where('plan_item_id', $item->id)
-            ->first();
-
-        if ($existingTask && !$existingTask->cleared_at) {
-            $existingTask->update([
-                'status' => $data['status'] === 'done' ? 'done' : 'pending',
+        if ($task) {
+            $task->update([
+                'status' => 'done',
+                'cleared_at' => now(),
             ]);
         }
 
         return back();
     }
+
+    // DONE = prepared, still active
+    if ($requestedStatus === 'done') {
+        $item->update([
+            'status' => 'done',
+        ]);
+
+        if ($item->contentTopic) {
+            $item->contentTopic->update([
+                'status' => 'available',
+            ]);
+        }
+
+        if ($task && !$task->cleared_at) {
+            $task->update([
+                'status' => 'done',
+            ]);
+        }
+
+        return back();
+    }
+
+    // SKIPPED = stays active, yellow state
+    if ($requestedStatus === 'skipped') {
+        $item->update([
+            'status' => 'skipped',
+        ]);
+
+        if ($item->contentTopic) {
+            $item->contentTopic->update([
+                'status' => 'available',
+            ]);
+        }
+
+        if ($task && !$task->cleared_at) {
+            $task->update([
+                'status' => 'late',
+            ]);
+        }
+
+        return back();
+    }
+
+    // PLANNED = reset back to active planned
+    $item->update([
+        'status' => 'planned',
+    ]);
+
+    if ($item->contentTopic) {
+        $item->contentTopic->update([
+            'status' => 'available',
+        ]);
+    }
+
+    if ($task) {
+        $task->update([
+            'status' => 'pending',
+            'cleared_at' => null,
+        ]);
+    }
+
+    return back();
+}
 
     public function syncTodayTasks()
     {
@@ -304,30 +379,30 @@ private function pickNextTopicForBucket($allTopics, array $usedTopicIds, string 
             ->get();
 
         foreach ($planItems as $item) {
-            if ($item->status === 'done') {
-                continue;
-            }
+    if ($item->status === 'used') {
+        continue;
+    }
 
-            $exists = TodoTask::query()
+    $exists = TodoTask::query()
                 ->where('user_id', $userId)
                 ->where('plan_item_id', $item->id)
                 ->exists();
 
             if (!$exists) {
-                TodoTask::create([
-                    'user_id' => $userId,
-                    'plan_item_id' => $item->id,
-                    'title' => $item->task_title,
-                    'profile_name' => $item->profile_name,
-                    'content_bucket' => $item->content_bucket,
-                    'shared_content_group' => $item->shared_content_group,
-                    'platform' => $item->platform,
-                    'series' => $item->series,
-                    'voice_tool' => $item->voice_tool,
-                    'scheduled_for' => $date,
-                    'publish_time' => $item->publish_time,
-                    'status' => 'pending',
-                ]);
+    TodoTask::create([
+        'user_id' => $userId,
+        'plan_item_id' => $item->id,
+        'title' => $item->task_title,
+        'profile_name' => $item->profile_name,
+        'content_bucket' => $item->content_bucket,
+        'shared_content_group' => $item->shared_content_group,
+        'platform' => $item->platform,
+        'series' => $item->series,
+        'voice_tool' => $item->voice_tool,
+        'scheduled_for' => $date,
+        'publish_time' => $item->publish_time,
+        'status' => $item->status === 'done' ? 'done' : 'pending',
+    ]);
             }
         }
     }

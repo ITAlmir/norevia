@@ -1,6 +1,7 @@
 <script setup>
 import TodoLayout from '@/Layouts/TodoLayout.vue'
 import { useForm, router } from '@inertiajs/vue3'
+import { computed, ref } from 'vue'
 import { useUiFeedback } from '@/Composables/useUiFeedback'
 
 const props = defineProps({
@@ -9,6 +10,34 @@ const props = defineProps({
     default: () => [],
   },
 })
+
+const hiddenTaskIds = ref([])
+
+const visibleTasks = computed(() =>
+  props.tasks.filter(task => !task.cleared_at)
+)
+
+const incomingTasks = computed(() =>
+  props.tasks.filter(task =>
+    isTaskVisible(task) &&
+    task.plan_item_status !== 'skipped' &&
+    task.status !== 'done'
+  )
+)
+
+const doneTasks = computed(() =>
+  props.tasks.filter(task =>
+    isTaskVisible(task) &&
+    task.status === 'done'
+  )
+)
+
+const skippedTasks = computed(() =>
+  props.tasks.filter(task =>
+    isTaskVisible(task) &&
+    task.plan_item_status === 'skipped'
+  )
+)
 
 const form = useForm({
   title: '',
@@ -31,11 +60,47 @@ const submit = () => {
 
 const isTaskCleared = (task) => !!task?.cleared_at
 
+const isTaskVisible = (task) => {
+  return !task?.cleared_at && !hiddenTaskIds.value.includes(task.id)
+}
+
 const markDone = (task) => {
   if (isTaskCleared(task)) return
 
   router.patch(`/todo/tasks/${task.id}`, {
     status: task.status === 'done' ? 'pending' : 'done',
+  }, {
+    preserveScroll: true,
+  })
+}
+
+const markUsed = (task) => {
+  if (isTaskCleared(task)) return
+
+  openConfirm({
+    title: 'Mark Used',
+    message: `Mark "${task.title}" as published and move it to archive?`,
+    confirmLabel: 'Mark Used',
+    danger: false,
+    action: () => router.patch(`/todo/tasks/${task.id}`, {
+      status: 'used',
+    }, {
+      preserveScroll: true,
+      onSuccess: () => {
+        if (!hiddenTaskIds.value.includes(task.id)) {
+          hiddenTaskIds.value.push(task.id)
+        }
+        showToast('Task moved to archive.', 'success')
+      },
+    }),
+  })
+}
+
+const markSkipped = (task) => {
+  if (isTaskCleared(task)) return
+
+  router.patch(`/todo/tasks/${task.id}`, {
+    status: task.plan_item_status === 'skipped' ? 'pending' : 'skipped',
   }, {
     preserveScroll: true,
   })
@@ -67,7 +132,11 @@ const clearActiveTasks = () => {
   })
 }
 
-const badgeClass = (status) => {
+const badgeClass = (status, planItemStatus = null) => {
+  if (planItemStatus === 'skipped') {
+    return 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
+  }
+
   if (status === 'done') {
     return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
   }
@@ -76,14 +145,38 @@ const badgeClass = (status) => {
     return 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300'
   }
 
-  return 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
+  return 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
 }
 
 const copy = async (text) => {
-  if (!text) return
+  const value = String(text || '').trim()
 
-  await navigator.clipboard.writeText(text)
-  showToast('Copied to clipboard.', 'success')
+  if (!value) {
+    showToast('Nothing to copy.', 'error')
+    return
+  }
+
+  try {
+    await navigator.clipboard.writeText(value)
+    showToast('Copied to clipboard.', 'success')
+  } catch (error) {
+    const textarea = document.createElement('textarea')
+    textarea.value = value
+    textarea.style.position = 'fixed'
+    textarea.style.opacity = '0'
+    document.body.appendChild(textarea)
+    textarea.focus()
+    textarea.select()
+
+    try {
+      document.execCommand('copy')
+      showToast('Copied to clipboard.', 'success')
+    } catch {
+      showToast('Copy failed.', 'error')
+    }
+
+    document.body.removeChild(textarea)
+  }
 }
 
 const copyPack = async (task) => {
@@ -93,10 +186,32 @@ const copyPack = async (task) => {
   if (task.description) text += task.description + '\n\n'
   if (task.hashtags) text += task.hashtags
 
-  if (!text.trim()) return
+  if (!text.trim()) {
+    showToast('Nothing to copy.', 'error')
+    return
+  }
 
-  await navigator.clipboard.writeText(text)
-  showToast('Full post copied.', 'success')
+  try {
+    await navigator.clipboard.writeText(text)
+    showToast('Full post copied.', 'success')
+  } catch (error) {
+    const textarea = document.createElement('textarea')
+    textarea.value = text
+    textarea.style.position = 'fixed'
+    textarea.style.opacity = '0'
+    document.body.appendChild(textarea)
+    textarea.focus()
+    textarea.select()
+
+    try {
+      document.execCommand('copy')
+      showToast('Full post copied.', 'success')
+    } catch {
+      showToast('Copy failed.', 'error')
+    }
+
+    document.body.removeChild(textarea)
+  }
 }
 
 const formatTaskDate = (date) => {
@@ -134,7 +249,7 @@ const formatTime = (time) => {
             </h2>
 
             <p class="mt-2 text-sm text-slate-600 dark:text-slate-400">
-              Active and completed tasks.
+              Active, prepared, and skipped tasks.
             </p>
           </div>
 
@@ -153,136 +268,169 @@ const formatTime = (time) => {
           </div>
         </div>
 
-        <div v-if="tasks.length" class="mt-6 space-y-3">
+        <div class="mt-6">
+          <h3 class="mb-3 text-sm font-black uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
+            Incoming Tasks
+          </h3>
+
+          <div v-if="incomingTasks.length" class="space-y-1 text-sm">
+
+  <div
+    v-for="task in incomingTasks"
+    :key="task.id"
+    class="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-800 dark:bg-slate-950/60"
+  >
+
+    <div class="truncate text-slate-900 dark:text-white">
+      {{ task.title }}
+    </div>
+
+    <div class="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
+
+      <span v-if="task.platform">
+        {{ task.platform }}
+      </span>
+
+      <span v-if="task.publish_time">
+        {{ formatTime(task.publish_time) }}
+      </span>
+
+      <button
+        class="rounded-lg border border-slate-300 px-2 py-1 text-xs font-bold hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
+        @click="markDone(task)"
+      >
+        {{ task.status === 'done' ? 'Undo' : 'Done' }}
+      </button>
+
+      <button
+        class="rounded-lg border border-amber-300 px-2 py-1 text-xs font-bold text-amber-700 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-300 dark:hover:bg-amber-900/20"
+        @click="markSkipped(task)"
+      >
+        Skip
+      </button>
+
+      <button
+        class="rounded-lg bg-rose-600 px-2 py-1 text-xs font-bold text-white hover:bg-rose-700"
+        @click="removeTask(task)"
+      >
+        Delete
+      </button>
+
+    </div>
+
+  </div>
+
+</div>
+
           <div
-            v-for="task in tasks"
-            :key="task.id"
-            :class="task.status === 'done'
-              ? 'rounded-2xl border border-emerald-300 bg-emerald-50/60 p-4 dark:border-emerald-900/40 dark:bg-emerald-950/20'
-              : 'rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/60'"
+            v-else
+            class="rounded-2xl border border-dashed border-slate-300 p-5 text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400"
           >
-            <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-              <div class="flex-1">
-                <div class="text-base font-black text-slate-900 dark:text-white">
-                  {{ task.title }}
-                </div>
-
-                <div class="mt-2 flex flex-wrap gap-2 text-xs">
-                  <span
-                    v-if="task.platform"
-                    class="rounded-full bg-slate-200 px-2.5 py-1 font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300"
-                  >
-                    {{ task.platform }}
-                  </span>
-
-                  <span
-                    v-if="task.series"
-                    class="rounded-full bg-violet-100 px-2.5 py-1 font-semibold text-violet-700 dark:bg-violet-900/30 dark:text-violet-300"
-                  >
-                    {{ task.series }}
-                  </span>
-
-                  <span
-                    v-if="task.voice_tool"
-                    class="rounded-full bg-cyan-100 px-2.5 py-1 font-semibold text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300"
-                  >
-                    {{ task.voice_tool }}
-                  </span>
-
-                  <span
-                    v-if="task.scheduled_for"
-                    class="rounded-full bg-slate-100 px-2.5 py-1 font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300"
-                  >
-                    {{ formatTaskDate(task.scheduled_for) }}
-                  </span>
-
-                  <span
-                    v-if="task.publish_time"
-                    class="rounded-full bg-amber-100 px-2.5 py-1 font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
-                  >
-                    {{ formatTime(task.publish_time) }}
-                  </span>
-
-                  <span
-                    v-if="task.cleared_at"
-                    class="rounded-full bg-slate-300 px-2 py-1 text-xs font-semibold text-slate-700"
-                  >
-                    cleared
-                  </span>
-                </div>
-
-                <div v-if="task.notes" class="mt-3 text-sm text-slate-600 dark:text-slate-400">
-                  {{ task.notes }}
-                </div>
-
-                <div class="mt-3 flex flex-wrap gap-2">
-                  <button
-                    v-if="task.caption"
-                    @click="copy(task.caption)"
-                    class="rounded-lg border border-slate-300 px-3 py-1 text-xs font-semibold hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
-                  >
-                    Copy Caption
-                  </button>
-
-                  <button
-                    v-if="task.description"
-                    @click="copy(task.description)"
-                    class="rounded-lg border border-slate-300 px-3 py-1 text-xs font-semibold hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
-                  >
-                    Copy Description
-                  </button>
-
-                  <button
-                    v-if="task.hashtags"
-                    @click="copy(task.hashtags)"
-                    class="rounded-lg border border-slate-300 px-3 py-1 text-xs font-semibold hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
-                  >
-                    Copy Hashtags
-                  </button>
-
-                  <button
-                    @click="copyPack(task)"
-                    class="rounded-xl bg-cyan-600 px-4 py-1 text-xs font-bold text-white hover:bg-cyan-700"
-                  >
-                    Copy Full Post
-                  </button>
-                </div>
-              </div>
-
-              <div class="flex flex-wrap items-center gap-2">
-                <span
-                  class="rounded-full px-2.5 py-1 text-xs font-bold uppercase tracking-wide"
-                  :class="badgeClass(task.status)"
-                >
-                  {{ task.status }}
-                </span>
-
-                <button
-                  class="rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
-                  :disabled="isTaskCleared(task)"
-                  @click="markDone(task)"
-                >
-                  {{ task.status === 'done' ? 'Mark Pending' : 'Mark Done' }}
-                </button>
-
-                <button
-                  class="rounded-xl bg-rose-600 px-3 py-2 text-sm font-semibold text-white hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-50"
-                  :disabled="isTaskCleared(task)"
-                  @click="removeTask(task)"
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
+            No incoming tasks.
           </div>
         </div>
 
-        <div
-          v-else
-          class="mt-6 rounded-2xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400"
+        <div class="mt-8">
+  <h3 class="mb-3 text-sm font-black uppercase tracking-[0.14em] text-emerald-600 dark:text-emerald-400">
+    Done / Ready To Publish
+  </h3>
+
+  <div v-if="doneTasks.length" class="space-y-1 text-sm">
+
+    <div
+      v-for="task in doneTasks"
+      :key="task.id"
+      class="flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 dark:border-emerald-900/40 dark:bg-emerald-950/20"
+    >
+
+      <div class="truncate text-slate-900 dark:text-white">
+        {{ task.title }}
+      </div>
+
+      <div class="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
+
+        <span v-if="task.platform">
+          {{ task.platform }}
+        </span>
+
+        <span v-if="task.publish_time">
+          {{ formatTime(task.publish_time) }}
+        </span>
+
+        <button
+          class="rounded-lg bg-emerald-600 px-2 py-1 text-xs font-bold text-white hover:bg-emerald-700"
+          @click="markUsed(task)"
         >
-          No tasks yet.
-        </div>
+          Used
+        </button>
+        <span class="text-slate-400">|</span>
+        <button
+          @click="copyPack(task)"
+          class="text-xs text-cyan-600 hover:underline dark:text-cyan-400"
+        >
+          copy desc
+        </button>
+      </div>
+
+    </div>
+
+  </div>
+
+  <div
+    v-else
+    class="rounded-2xl border border-dashed border-slate-300 p-5 text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400"
+  >
+    No done tasks yet.
+  </div>
+</div>
+
+        <div class="mt-8">
+  <h3 class="mb-3 text-sm font-black uppercase tracking-[0.14em] text-amber-600 dark:text-amber-400">
+    Skipped Tasks
+  </h3>
+
+  <div v-if="skippedTasks.length" class="space-y-1 text-sm">
+
+    <div
+      v-for="task in skippedTasks"
+      :key="task.id"
+      class="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 dark:border-amber-900/40 dark:bg-amber-950/20"
+    >
+
+      <div class="truncate text-slate-900 dark:text-white">
+        {{ task.title }}
+      </div>
+
+      <div class="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
+
+        <span v-if="task.platform">
+          {{ task.platform }}
+        </span>
+
+        <span class="font-semibold text-amber-600">
+          skipped
+        </span>
+
+        <button
+          class="rounded-lg border border-amber-300 px-2 py-1 text-xs font-bold text-amber-700 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-300 dark:hover:bg-amber-900/20"
+          @click="markSkipped(task)"
+        >
+          Unskip
+        </button>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <div
+    v-else
+    class="rounded-2xl border border-dashed border-slate-300 p-5 text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400"
+  >
+    No skipped tasks.
+  </div>
+</div>
       </section>
 
       <section class="rounded-[28px] border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">

@@ -30,11 +30,14 @@ const props = defineProps({
   },
 })
 
-const { showToast } = useUiFeedback()
+const { showToast, openConfirm } = useUiFeedback()
 
 const badgeClass = (status) => {
   if (status === 'done') {
-    return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
+    return 'border border-emerald-500 text-emerald-600 dark:text-emerald-300'
+  }
+  if (status === 'used') {
+    return 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300'
   }
   if (status === 'late') {
     return 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300'
@@ -42,37 +45,68 @@ const badgeClass = (status) => {
   if (status === 'planned') {
     return 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300'
   }
-  return 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
+  if (status === 'skipped') {
+    return 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
+  }
+  return 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
 }
 
 const isTaskCleared = (item) => !!item?.cleared_at
 
-const toggleTodayTask = (item) => {
+const setPlanItemStatus = (item, nextStatus, successMessage) => {
   if (!item?.id) return
   if (item.cleared_at) return
-
-  const nextStatus = item.status === 'done' || item.task_status === 'done'
-    ? 'planned'
-    : 'done'
 
   router.patch(`/todo/monthly-plan/items/${item.id}/toggle`, {
     status: nextStatus,
   }, {
     preserveScroll: true,
     onSuccess: () => {
-      showToast(
-        nextStatus === 'done'
-          ? 'Today item marked done.'
-          : 'Today item returned to planned state.',
-        'success'
-      )
+      showToast(successMessage, 'success')
     },
   })
 }
 
+const toggleTodayTask = (item) => {
+  const currentStatus = item.task_status ?? item.status
+  const nextStatus = currentStatus === 'done' ? 'planned' : 'done'
+
+  setPlanItemStatus(
+    item,
+    nextStatus,
+    nextStatus === 'done'
+      ? 'Today item marked done.'
+      : 'Today item returned to planned state.'
+  )
+}
+
+const markTodayUsed = (item) => {
+  if (!item?.id || item.cleared_at) return
+
+  openConfirm({
+    title: 'Mark Used',
+    message: `Mark "${item.task_title}" as published and move it to archive?`,
+    confirmLabel: 'Mark Used',
+    danger: false,
+    action: () => setPlanItemStatus(item, 'used', 'Today item marked used and archived.'),
+  })
+}
+
+const toggleTodaySkipped = (item) => {
+  const currentStatus = item.task_status ?? item.status
+  const nextStatus = currentStatus === 'skipped' ? 'planned' : 'skipped'
+
+  setPlanItemStatus(
+    item,
+    nextStatus,
+    nextStatus === 'skipped'
+      ? 'Today item marked skipped.'
+      : 'Today item returned to planned state.'
+  )
+}
+
 const toggleLateTask = (task) => {
-  if (!task?.id) return
-  if (task.cleared_at) return
+  if (!task?.id || task.cleared_at) return
 
   const nextStatus = task.status === 'done' ? 'pending' : 'done'
 
@@ -84,7 +118,46 @@ const toggleLateTask = (task) => {
       showToast(
         nextStatus === 'done'
           ? 'Late task marked done.'
-          : 'Late task returned to planned state.',
+          : 'Late task returned to pending state.',
+        'success'
+      )
+    },
+  })
+}
+
+const markLateUsed = (task) => {
+  if (!task?.id || task.cleared_at) return
+
+  openConfirm({
+    title: 'Mark Used',
+    message: `Mark "${task.title}" as published and move it to archive?`,
+    confirmLabel: 'Mark Used',
+    danger: false,
+    action: () => router.patch(`/todo/tasks/${task.id}`, {
+      status: 'used',
+    }, {
+      preserveScroll: true,
+      onSuccess: () => {
+        showToast('Late task marked used and archived.', 'success')
+      },
+    }),
+  })
+}
+
+const toggleLateSkipped = (task) => {
+  if (!task?.id || task.cleared_at) return
+
+  const nextStatus = task.plan_item_status === 'skipped' ? 'pending' : 'skipped'
+
+  router.patch(`/todo/tasks/${task.id}`, {
+    status: nextStatus,
+  }, {
+    preserveScroll: true,
+    onSuccess: () => {
+      showToast(
+        nextStatus === 'skipped'
+          ? 'Late task marked skipped.'
+          : 'Late task returned to pending state.',
         'success'
       )
     },
@@ -92,26 +165,41 @@ const toggleLateTask = (task) => {
 }
 
 const toggleUpcomingTask = (item) => {
-  if (!item?.id) return
-  if (item.cleared_at) return
+  const currentStatus = item.task_status ?? item.status
+  const nextStatus = currentStatus === 'done' ? 'planned' : 'done'
 
-  const nextStatus = item.status === 'done' || item.task_status === 'done'
-    ? 'planned'
-    : 'done'
+  setPlanItemStatus(
+    item,
+    nextStatus,
+    nextStatus === 'done'
+      ? 'Upcoming item marked done.'
+      : 'Upcoming item returned to planned state.'
+  )
+}
 
-  router.patch(`/todo/monthly-plan/items/${item.id}/toggle`, {
-    status: nextStatus,
-  }, {
-    preserveScroll: true,
-    onSuccess: () => {
-      showToast(
-        nextStatus === 'done'
-          ? 'Upcoming item marked done.'
-          : 'Upcoming item returned to planned state.',
-        'success'
-      )
-    },
+const markUpcomingUsed = (item) => {
+  if (!item?.id || item.cleared_at) return
+
+  openConfirm({
+    title: 'Mark Used',
+    message: `Mark "${item.task_title}" as published and move it to archive?`,
+    confirmLabel: 'Mark Used',
+    danger: false,
+    action: () => setPlanItemStatus(item, 'used', 'Upcoming item marked used and archived.'),
   })
+}
+
+const toggleUpcomingSkipped = (item) => {
+  const currentStatus = item.task_status ?? item.status
+  const nextStatus = currentStatus === 'skipped' ? 'planned' : 'skipped'
+
+  setPlanItemStatus(
+    item,
+    nextStatus,
+    nextStatus === 'skipped'
+      ? 'Upcoming item marked skipped.'
+      : 'Upcoming item returned to planned state.'
+  )
 }
 
 const toDateKey = (value) => {
@@ -196,6 +284,47 @@ const formatDashboardDate = (date) => {
     day: '2-digit',
     year: 'numeric',
   })
+}
+
+const copyText = async (value, successMessage = 'Copied.') => {
+  const text = String(value || '').trim()
+
+  if (!text) {
+    showToast('Nothing to copy.', 'error')
+    return
+  }
+
+  try {
+    await navigator.clipboard.writeText(text)
+    showToast(successMessage, 'success')
+  } catch (error) {
+    const textarea = document.createElement('textarea')
+    textarea.value = text
+    textarea.style.position = 'fixed'
+    textarea.style.opacity = '0'
+    document.body.appendChild(textarea)
+    textarea.focus()
+    textarea.select()
+
+    try {
+      document.execCommand('copy')
+      showToast(successMessage, 'success')
+    } catch {
+      showToast('Copy failed.', 'error')
+    }
+
+    document.body.removeChild(textarea)
+  }
+}
+
+const copyFullPost = async (item) => {
+  const parts = []
+
+  if (item.caption) parts.push(item.caption)
+  if (item.description) parts.push(item.description)
+  if (item.hashtags) parts.push(item.hashtags)
+
+  await copyText(parts.join('\n\n'), 'Full post copied.')
 }
 </script>
 
@@ -291,17 +420,37 @@ const formatDashboardDate = (date) => {
 
         <div v-if="todayPlan.length" class="mt-6 space-y-3">
           <div
-            v-for="item in todayPlan"
-            :key="item.id"
-            :class="item.task_status === 'done'
-              ? 'rounded-2xl border border-emerald-300 bg-emerald-50/60 p-4 dark:border-emerald-900/40 dark:bg-emerald-950/20'
-              : 'rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/60'"
-          >
+  v-for="item in todayPlan"
+  :key="item.id"
+  :class="[
+    'rounded-2xl border p-4 transition-all duration-200',
+
+    // DONE (zeleno - nagrađujuće)
+    (item.task_status ?? item.status) === 'done'
+      ? 'hover:scale-[1.01] hover:shadow-[0_6px_25px_rgba(16,185,129,0.25)] ring-1 ring-emerald-300/50 dark:ring-emerald-700/40 bg-gradient-to-br from-emerald-100 to-emerald-50 border-emerald-400 shadow-[0_4px_20px_rgba(16,185,129,0.15)] dark:from-emerald-900/40 dark:to-emerald-900/10 dark:border-emerald-700'
+
+    // SKIPPED (amber - upozorenje)
+    : (item.task_status ?? item.status) === 'skipped'
+      ? 'bg-gradient-to-br from-amber-100 to-amber-50 border-amber-400 shadow-[0_4px_20px_rgba(245,158,11,0.15)] dark:from-amber-900/40 dark:to-amber-900/10 dark:border-amber-700'
+
+    // DEFAULT
+    : 'bg-gradient-to-br from-slate-100 to-slate-50 border-slate-300 shadow-sm dark:from-slate-900/60 dark:to-slate-900/30 dark:border-slate-700'
+  ]"
+>
             <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <div>
-                <div class="text-base font-bold text-slate-900 dark:text-white">
-                  {{ item.task_title }}
-                </div>
+                <div class="flex items-center justify-between gap-2">
+  <h3 class="text-sm font-medium text-slate-900 dark:text-white truncate">
+    {{ item.task_title }}
+  </h3>
+
+  <span
+    class="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase"
+    :class="badgeClass(item.task_status ?? item.status)"
+  >
+    {{ item.task_status ?? item.status }}
+  </span>
+</div><hr class="border-slate-400 dark:border-slate-600">
 
                 <div class="mt-2 flex flex-wrap gap-2 text-xs">
                   <span
@@ -349,13 +498,7 @@ const formatDashboardDate = (date) => {
               </div>
 
               <div class="flex flex-wrap items-center gap-2">
-                <span
-                  class="rounded-full px-2.5 py-1 text-xs font-bold uppercase tracking-wide"
-                  :class="badgeClass(item.task_status ?? item.status)"
-                >
-                  {{ item.task_status ?? item.status }}
-                </span>
-
+                
                 <button
                   type="button"
                   class="rounded-xl px-3 py-2 text-xs font-bold transition disabled:cursor-not-allowed disabled:opacity-50"
@@ -369,6 +512,61 @@ const formatDashboardDate = (date) => {
                     ? 'Cleared'
                     : ((item.task_status ?? item.status) === 'done' ? 'Mark Planned' : 'Mark Done') }}
                 </button>
+
+                <button
+                  type="button"
+                  class="rounded-xl bg-cyan-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-cyan-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  :disabled="isTaskCleared(item)"
+                  @click="markTodayUsed(item)"
+                >
+                  Mark Used
+                </button>
+
+                <button
+                  type="button"
+                  class="rounded-xl border border-amber-300 px-3 py-2 text-xs font-bold text-amber-700 transition hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-amber-700 dark:text-amber-300 dark:hover:bg-amber-900/20"
+                  :disabled="isTaskCleared(item)"
+                  @click="toggleTodaySkipped(item)"
+                >
+                  {{ (item.task_status ?? item.status) === 'skipped' ? 'Unskip' : 'Skip' }}
+                </button>
+
+                <div class="mt-3 flex flex-wrap gap-2">
+  <button
+    v-if="item.caption"
+    type="button"
+    @click="copyText(item.caption, 'Caption copied.')"
+    class="rounded-lg border border-slate-300 px-2 py-1 text-xs font-semibold hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
+  >
+    Copy Caption
+  </button>
+
+  <button
+    v-if="item.description"
+    type="button"
+    @click="copyText(item.description, 'Description copied.')"
+    class="rounded-lg border border-slate-300 px-2 py-1 text-xs font-semibold hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
+  >
+    Copy Description
+  </button>
+
+  <button
+    v-if="item.hashtags"
+    type="button"
+    @click="copyText(item.hashtags, 'Hashtags copied.')"
+    class="rounded-lg border border-slate-300 px-2 py-1 text-xs font-semibold hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
+  >
+    Copy Hashtags
+  </button>
+
+  <button
+    type="button"
+    @click="copyFullPost(item)"
+    class="rounded-lg bg-cyan-600 px-2 py-1 text-xs font-bold text-white hover:bg-cyan-700"
+  >
+    Copy Full Post
+  </button>
+</div>
               </div>
             </div>
           </div>
@@ -495,83 +693,83 @@ const formatDashboardDate = (date) => {
         </div>
 
         <div v-if="bucketCoverage.length" class="mt-6 space-y-3">
-  <div
-  v-for="item in bucketCoverage"
-  :key="item.content_bucket"
-  class="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/60"
->
-  <div class="min-w-0">
-    <div class="flex flex-col gap-3">
-      <div class="min-w-0">
-        <div class="text-base font-black text-slate-900 dark:text-white">
-          {{ item.label }}
-        </div>
-
-        <div class="mt-2 flex flex-wrap items-start gap-2 text-xs">
-          <span
-            class="inline-flex max-w-full break-all rounded-lg bg-slate-200 px-2.5 py-1 font-semibold leading-5 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
-          >
-            {{ item.content_bucket }}
-          </span>
-
-          <span
-            class="inline-flex rounded-lg bg-cyan-100 px-2.5 py-1 font-semibold leading-5 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300"
-          >
-            target {{ item.required }}
-          </span>
-
-          <span
-            class="inline-flex rounded-lg bg-emerald-100 px-2.5 py-1 font-semibold leading-5 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
-          >
-            planned {{ item.planned }}
-          </span>
-        </div>
-      </div>
-
-      <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <div class="rounded-xl border border-slate-200 bg-white px-3 py-3 dark:border-slate-700 dark:bg-slate-900">
-          <div class="text-[11px] uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
-            Required
-          </div>
-          <div class="mt-1 text-2xl font-black text-slate-900 dark:text-white">
-            {{ item.required }}
-          </div>
-        </div>
-
-        <div class="rounded-xl border border-slate-200 bg-white px-3 py-3 dark:border-slate-700 dark:bg-slate-900">
-          <div class="text-[11px] uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
-            Planned
-          </div>
-          <div class="mt-1 text-2xl font-black text-slate-900 dark:text-white">
-            {{ item.planned }}
-          </div>
-        </div>
-
-        <div class="rounded-xl border border-slate-200 bg-white px-3 py-3 dark:border-slate-700 dark:bg-slate-900">
-          <div class="text-[11px] uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
-            Available
-          </div>
-          <div class="mt-1 text-2xl font-black text-slate-900 dark:text-white">
-            {{ item.available }}
-          </div>
-        </div>
-
-        <div class="rounded-xl border border-slate-200 bg-white px-3 py-3 dark:border-slate-700 dark:bg-slate-900">
-          <div class="text-[11px] uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
-            Missing
-          </div>
           <div
-            class="mt-1 text-2xl font-black"
-            :class="item.missing > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'"
+            v-for="item in bucketCoverage"
+            :key="item.content_bucket"
+            class="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/60"
           >
-            {{ item.missing }}
+            <div class="min-w-0">
+              <div class="flex flex-col gap-3">
+                <div class="min-w-0">
+                  <div class="text-base font-black text-slate-900 dark:text-white">
+                    {{ item.label }}
+                  </div>
+
+                  <div class="mt-2 flex flex-wrap items-start gap-2 text-xs">
+                    <span
+                      class="inline-flex max-w-full break-all rounded-lg bg-slate-200 px-2.5 py-1 font-semibold leading-5 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                    >
+                      {{ item.content_bucket }}
+                    </span>
+
+                    <span
+                      class="inline-flex rounded-lg bg-cyan-100 px-2.5 py-1 font-semibold leading-5 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300"
+                    >
+                      target {{ item.required }}
+                    </span>
+
+                    <span
+                      class="inline-flex rounded-lg bg-emerald-100 px-2.5 py-1 font-semibold leading-5 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
+                    >
+                      planned {{ item.planned }}
+                    </span>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                  <div class="rounded-xl border border-slate-200 bg-white px-3 py-3 dark:border-slate-700 dark:bg-slate-900">
+                    <div class="text-[11px] uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
+                      Required
+                    </div>
+                    <div class="mt-1 text-2xl font-black text-slate-900 dark:text-white">
+                      {{ item.required }}
+                    </div>
+                  </div>
+
+                  <div class="rounded-xl border border-slate-200 bg-white px-3 py-3 dark:border-slate-700 dark:bg-slate-900">
+                    <div class="text-[11px] uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
+                      Planned
+                    </div>
+                    <div class="mt-1 text-2xl font-black text-slate-900 dark:text-white">
+                      {{ item.planned }}
+                    </div>
+                  </div>
+
+                  <div class="rounded-xl border border-slate-200 bg-white px-3 py-3 dark:border-slate-700 dark:bg-slate-900">
+                    <div class="text-[11px] uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
+                      Available
+                    </div>
+                    <div class="mt-1 text-2xl font-black text-slate-900 dark:text-white">
+                      {{ item.available }}
+                    </div>
+                  </div>
+
+                  <div class="rounded-xl border border-slate-200 bg-white px-3 py-3 dark:border-slate-700 dark:bg-slate-900">
+                    <div class="text-[11px] uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
+                      Missing
+                    </div>
+                    <div
+                      class="mt-1 text-2xl font-black"
+                      :class="item.missing > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'"
+                    >
+                      {{ item.missing }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-    </div>
-  </div>
-</div>
-</div>
 
         <div v-else class="mt-6 rounded-2xl border border-dashed border-slate-300 p-6 text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
           No content bucket coverage available.
@@ -601,6 +799,8 @@ const formatDashboardDate = (date) => {
             <input
               v-model="selectedUpcomingDate"
               type="date"
+              :min="availableUpcomingDates[0] || undefined"
+              :max="availableUpcomingDates[availableUpcomingDates.length - 1] || undefined"
               class="date-picker-contrast rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm text-slate-900 dark:border-slate-500 dark:bg-white dark:text-slate-900"
             />
 
@@ -628,14 +828,35 @@ const formatDashboardDate = (date) => {
           <div v-if="selectedUpcomingItems.length" class="space-y-3">
             <div
               v-for="item in selectedUpcomingItems"
-              :key="item.id"
-              class="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/60"
-            >
+              :class="[
+    'rounded-2xl border p-4 transition-all duration-200',
+
+    // DONE (zeleno - nagrađujuće)
+    (item.task_status ?? item.status) === 'done'
+      ? 'hover:scale-[1.01] hover:shadow-[0_6px_25px_rgba(16,185,129,0.25)] ring-1 ring-emerald-300/50 dark:ring-emerald-700/40 bg-gradient-to-br from-emerald-100 to-emerald-50 border-emerald-400 shadow-[0_4px_20px_rgba(16,185,129,0.15)] dark:from-emerald-900/40 dark:to-emerald-900/10 dark:border-emerald-700'
+
+    // SKIPPED (amber - upozorenje)
+    : (item.task_status ?? item.status) === 'skipped'
+      ? 'bg-gradient-to-br from-amber-100 to-amber-50 border-amber-400 shadow-[0_4px_20px_rgba(245,158,11,0.15)] dark:from-amber-900/40 dark:to-amber-900/10 dark:border-amber-700'
+
+    // DEFAULT
+    : 'bg-gradient-to-br from-slate-100 to-slate-50 border-slate-300 shadow-sm dark:from-slate-900/60 dark:to-slate-900/30 dark:border-slate-700'
+  ]"
+>
               <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div>
-                  <div class="font-bold text-slate-900 dark:text-white">
-                    {{ item.task_title }}
-                  </div>
+                  <div class="flex items-center justify-between gap-2">
+  <h3 class="text-sm font-medium text-slate-900 dark:text-white truncate">
+    {{ item.task_title }}
+  </h3>
+
+  <span
+    class="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase"
+    :class="badgeClass(item.task_status ?? item.status)"
+  >
+    {{ item.task_status ?? item.status }}
+  </span>
+</div><hr class="border-slate-300 dark:border-slate-700">
 
                   <div class="mt-2 flex flex-wrap items-start gap-2 text-xs">
                     <span
@@ -682,13 +903,7 @@ const formatDashboardDate = (date) => {
                   </div>
                 </div>
 
-                <div class="flex flex-wrap items-center gap-2">
-                  <span
-                    class="rounded-full px-2.5 py-1 text-xs font-bold uppercase tracking-wide"
-                    :class="badgeClass(item.task_status || item.status)"
-                  >
-                    {{ item.task_status || item.status }}
-                  </span>
+                <div class="flex flex-wrap items-center gap-2">                  
 
                   <button
                     type="button"
@@ -703,6 +918,61 @@ const formatDashboardDate = (date) => {
                       ? 'Cleared'
                       : ((item.task_status ?? item.status) === 'done' ? 'Mark Planned' : 'Mark Done') }}
                   </button>
+
+                  <button
+                    type="button"
+                    class="rounded-xl bg-cyan-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-cyan-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    :disabled="isTaskCleared(item)"
+                    @click="markUpcomingUsed(item)"
+                  >
+                    Mark Used
+                  </button>
+
+                  <button
+                    type="button"
+                    class="rounded-xl border border-amber-300 px-3 py-2 text-xs font-bold text-amber-700 transition hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-amber-700 dark:text-amber-300 dark:hover:bg-amber-900/20"
+                    :disabled="isTaskCleared(item)"
+                    @click="toggleUpcomingSkipped(item)"
+                  >
+                    {{ (item.task_status ?? item.status) === 'skipped' ? 'Unskip' : 'Skip' }}
+                  </button>
+
+                  <div class="mt-3 flex flex-wrap gap-2">
+  <button
+    v-if="item.caption"
+    type="button"
+    @click="copyText(item.caption, 'Caption copied.')"
+    class="rounded-lg border border-slate-300 px-2 py-1 text-xs font-semibold hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
+  >
+    Copy Caption
+  </button>
+
+  <button
+    v-if="item.description"
+    type="button"
+    @click="copyText(item.description, 'Description copied.')"
+    class="rounded-lg border border-slate-300 px-2 py-1 text-xs font-semibold hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
+  >
+    Copy Description
+  </button>
+
+  <button
+    v-if="item.hashtags"
+    type="button"
+    @click="copyText(item.hashtags, 'Hashtags copied.')"
+    class="rounded-lg border border-slate-300 px-2 py-1 text-xs font-semibold hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
+  >
+    Copy Hashtags
+  </button>
+
+  <button
+    type="button"
+    @click="copyFullPost(item)"
+    class="rounded-lg bg-cyan-600 px-2 py-1 text-xs font-bold text-white hover:bg-cyan-700"
+  >
+    Copy Full Post
+  </button>
+</div>
                 </div>
               </div>
             </div>
@@ -738,7 +1008,9 @@ const formatDashboardDate = (date) => {
           <div
             v-for="task in lateTasks"
             :key="task.id"
-            class="rounded-2xl border border-rose-200 bg-rose-50 p-4 dark:border-rose-900/40 dark:bg-rose-950/20"
+            :class="task.plan_item_status === 'skipped'
+              ? 'rounded-2xl border border-amber-300 bg-amber-50/70 p-4 dark:border-amber-900/40 dark:bg-amber-950/20'
+              : 'rounded-2xl border border-rose-200 bg-rose-50 p-4 dark:border-rose-900/40 dark:bg-rose-950/20'"
           >
             <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <div>
@@ -801,9 +1073,9 @@ const formatDashboardDate = (date) => {
               <div class="flex flex-wrap items-center gap-2">
                 <span
                   class="rounded-full px-2.5 py-1 text-xs font-bold uppercase tracking-wide"
-                  :class="badgeClass(task.status)"
+                  :class="badgeClass(task.plan_item_status === 'skipped' ? 'skipped' : task.status)"
                 >
-                  {{ task.status }}
+                  {{ task.plan_item_status === 'skipped' ? 'skipped' : task.status }}
                 </span>
 
                 <button
@@ -817,7 +1089,25 @@ const formatDashboardDate = (date) => {
                 >
                   {{ task.cleared_at
                     ? 'Cleared'
-                    : (task.status === 'done' ? 'Mark Planned' : 'Mark Done') }}
+                    : (task.status === 'done' ? 'Mark Pending' : 'Mark Done') }}
+                </button>
+
+                <button
+                  type="button"
+                  class="rounded-xl bg-cyan-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-cyan-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  :disabled="!!task.cleared_at"
+                  @click="markLateUsed(task)"
+                >
+                  Mark Used
+                </button>
+
+                <button
+                  type="button"
+                  class="rounded-xl border border-amber-300 px-3 py-2 text-xs font-bold text-amber-700 transition hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-amber-700 dark:text-amber-300 dark:hover:bg-amber-900/20"
+                  :disabled="!!task.cleared_at"
+                  @click="toggleLateSkipped(task)"
+                >
+                  {{ task.plan_item_status === 'skipped' ? 'Unskip' : 'Skip' }}
                 </button>
               </div>
             </div>

@@ -5,6 +5,8 @@ import MainLayout from '@/Layouts/MainLayout.vue'
 import ConfirmModal from '@/Components/ConfirmModal.vue'
 import ToastMessage from '@/Components/ToastMessage.vue'
 import { useUiFeedback } from '@/Composables/useUiFeedback'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
+
 
 const {
   confirmState,
@@ -27,6 +29,29 @@ const navItems = [
 ]
 
 const currentPath = computed(() => page.url || '')
+
+
+const showScrollTop = ref(false)
+
+const handleScroll = () => {
+  showScrollTop.value = window.scrollY > 400
+}
+
+const scrollToTop = () => {
+  window.scrollTo({
+    top: 0,
+    behavior: 'smooth',
+  })
+}
+
+onMounted(() => {
+  window.addEventListener('scroll', handleScroll)
+  handleScroll()
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('scroll', handleScroll)
+})
 </script>
 
 <template>
@@ -61,7 +86,7 @@ const currentPath = computed(() => page.url || '')
               </h1>
 
               <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300 md:text-base">
-                Fokusiran pregled dana, plana i sadržaja bez admin haosa.
+                A focused view of your day, plans, and content — without the admin chaos.
               </p>
             </div>
 
@@ -123,4 +148,36 @@ const currentPath = computed(() => page.url || '')
   :type="toastState.type"
   @close="closeToast"
 />
+
+<transition
+  enter-active-class="transition ease-out duration-200"
+  enter-from-class="opacity-0 translate-y-4"
+  enter-to-class="opacity-100 translate-y-0"
+  leave-active-class="transition ease-in duration-150"
+  leave-from-class="opacity-100 translate-y-0"
+  leave-to-class="opacity-0 translate-y-4"
+>
+  <transition
+  enter-active-class="transition ease-out duration-200"
+  enter-from-class="opacity-0 translate-y-4"
+  enter-to-class="opacity-100 translate-y-0"
+  leave-active-class="transition ease-in duration-150"
+  leave-from-class="opacity-100 translate-y-0"
+  leave-to-class="opacity-0 translate-y-4"
+>
+  <button
+    v-if="showScrollTop"
+    @click="scrollToTop"
+    class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center justify-center
+           rounded-full shadow-lg backdrop-blur-md border border-white/10
+           bg-slate-900/80 text-white hover:bg-slate-800
+           dark:bg-white/90 dark:text-slate-900 dark:hover:bg-white
+           w-12 h-12"
+  >
+    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
+    </svg>
+  </button>
+</transition>
+</transition>
 </template>

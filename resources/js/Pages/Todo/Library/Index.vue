@@ -26,7 +26,7 @@ const bulkForm = useForm({
 const importPreview = ref(null)
 const allowHistoricalWarnings = ref(false)
 const previewConfirmed = ref(false)
-const importMode = ref('idle') 
+const importMode = ref('idle')
 const importPreviewRef = ref(null)
 
 const editForm = useForm({
@@ -120,17 +120,46 @@ const cancelEdit = () => {
 }
 
 const updateStatus = (topic, status) => {
+  if (status === 'used') {
+    openConfirm({
+      title: 'Mark Topic Used',
+      message: `Mark "${topic.title}" as used? This will move it out of the active library workflow.`,
+      confirmLabel: 'Mark Used',
+      danger: false,
+      action: () => {
+        router.patch(`/todo/library/${topic.id}`, { status }, {
+          preserveScroll: true,
+          onSuccess: () => {
+            showToast('Topic marked as used.', 'success')
+          },
+        })
+      },
+    })
+    return
+  }
+
+  if (status === 'archived') {
+    openConfirm({
+      title: 'Archive Topic',
+      message: `Archive "${topic.title}"?`,
+      confirmLabel: 'Archive',
+      danger: false,
+      action: () => {
+        router.patch(`/todo/library/${topic.id}`, { status }, {
+          preserveScroll: true,
+          onSuccess: () => {
+            showToast('Topic archived.', 'success')
+          },
+        })
+      },
+    })
+    return
+  }
+
   router.patch(`/todo/library/${topic.id}`, { status }, {
     preserveScroll: true,
     onSuccess: () => {
-      showToast(
-        status === 'used'
-          ? 'Topic marked as used.'
-          : status === 'archived'
-            ? 'Topic archived.'
-            : 'Topic updated.',
-        'success'
-      )
+      showToast('Topic updated.', 'success')
     },
   })
 }
@@ -197,18 +226,44 @@ const openMonthlyPlan = () => {
   router.visit('/todo/monthly-plan')
 }
 
-const copy = async (text) => {
-  if (!text) return
+const copyText = async (value, successMessage = 'Copied to clipboard.') => {
+  const text = String(value || '').trim()
 
-  await navigator.clipboard.writeText(text)
-  showToast('Copied to clipboard.', 'success')
+  if (!text) {
+    showToast('Nothing to copy.', 'error')
+    return
+  }
+
+  try {
+    await navigator.clipboard.writeText(text)
+    showToast(successMessage, 'success')
+  } catch (error) {
+    const textarea = document.createElement('textarea')
+    textarea.value = text
+    textarea.style.position = 'fixed'
+    textarea.style.opacity = '0'
+    textarea.style.pointerEvents = 'none'
+    document.body.appendChild(textarea)
+    textarea.focus()
+    textarea.select()
+
+    try {
+      document.execCommand('copy')
+      showToast(successMessage, 'success')
+    } catch {
+      showToast('Copy failed.', 'error')
+    }
+
+    document.body.removeChild(textarea)
+  }
+}
+
+const copy = async (text) => {
+  await copyText(text, 'Copied to clipboard.')
 }
 
 const copyTitle = async (topic) => {
-  if (!topic?.title) return
-
-  await navigator.clipboard.writeText(topic.title)
-  showToast('Title copied.', 'success')
+  await copyText(topic?.title, 'Title copied.')
 }
 
 const copyPack = async (topic) => {
@@ -219,11 +274,7 @@ const copyPack = async (topic) => {
   if (topic.hashtags) parts.push(topic.hashtags)
 
   const text = parts.join('\n\n')
-
-  if (!text.trim()) return
-
-  await navigator.clipboard.writeText(text)
-  showToast('Full post copied.', 'success')
+  await copyText(text, 'Full post copied.')
 }
 
 const statusClass = (status) => {
@@ -426,9 +477,10 @@ const contentModelText = computed(() => {
     } else {
       lines.push('Shared content group: none')
     }
+
     if (profile.content_bucket) {
-  lines.push(`Content bucket: ${profile.content_bucket}`)
-}
+      lines.push(`Content bucket: ${profile.content_bucket}`)
+    }
 
     lines.push('')
   })
@@ -440,8 +492,8 @@ const contentModelText = computed(() => {
     sharedGroupSummaries.value.forEach((group) => {
       lines.push(group.group_name)
       if (group.content_bucket) {
-  lines.push(`Content bucket: ${group.content_bucket}`)
-}
+        lines.push(`Content bucket: ${group.content_bucket}`)
+      }
       lines.push('Profiles:')
 
       group.profiles.forEach((profile) => {
@@ -461,6 +513,15 @@ const contentModelText = computed(() => {
   lines.push('- Profiles in the same shared content group must use the same content_bucket.')
   lines.push('- Every generated topic line must include content_bucket.')
   lines.push('- Keep the topics aligned with each profile description.')
+  lines.push('- Generate complete publishing-ready entries, not just titles.')
+  lines.push('- For each line, generate: title, caption, description, and hashtags whenever possible.')
+  lines.push('- Titles should be short, clickable, and clear.')
+  lines.push('- Captions should be engaging and concise.')
+  lines.push('- Descriptions should be ready to paste into social platforms.')
+  lines.push('- Hashtags should be relevant and clean, not spammy.')
+  lines.push('- Balkan Express topics, captions, descriptions, and hashtags must be in Croatian.')
+  lines.push('- All other channels should use English.')
+  lines.push('- Prefer the long bulk import format.')
   lines.push('- Output format for shortest bulk import: platform|series|content_bucket|title')
   lines.push('- Output format for short bulk import: platform|series|voice_tool|content_bucket|title')
   lines.push('- Output format for medium bulk import: platform|series|voice_tool|content_bucket|title|caption')
@@ -470,10 +531,36 @@ const contentModelText = computed(() => {
 })
 
 const copyContentModel = async () => {
-  if (!contentModelText.value.trim()) return
+  await copyText(contentModelText.value, 'Content model copied.')
+}
 
-  await navigator.clipboard.writeText(contentModelText.value)
-  showToast('Content model copied.', 'success')
+const invalidRowsPrompt = computed(() => {
+  const invalidLines = (importPreview.value?.invalid_rows || [])
+    .map(item => item.line)
+    .join('\n')
+
+  return [
+    'Fix these bulk import rows for my content planning app.',
+    '',
+    'Supported formats:',
+    'platform|series|content_bucket|title',
+    'platform|series|voice_tool|content_bucket|title',
+    'platform|series|voice_tool|content_bucket|title|caption',
+    'platform|series|voice_tool|content_bucket|title|caption|description|hashtags',
+    '',
+    'Rules:',
+    '- return only corrected rows',
+    '- keep one topic per line',
+    '- do not add explanations',
+    '- keep the original meaning where possible',
+    '',
+    'Rows to fix:',
+    invalidLines,
+  ].join('\n')
+})
+
+const copyInvalidRowsPrompt = async () => {
+  await copyText(invalidRowsPrompt.value, 'ChatGPT or Another Ai you use to fix prompt copied.')
 }
 
 watch(
@@ -511,7 +598,7 @@ watch(
 
           <div class="mt-4 font-semibold text-slate-900 dark:text-white">Example:</div>
           <div class="mt-2 font-mono text-xs leading-6">
-            tiktok|worldfacts|norevia-world-4821|Why ice floats on water
+            tiktok|cs2fps|bucket-1234|CS2 launch options
           </div>
         </div>
 
@@ -524,168 +611,225 @@ watch(
         </div>
 
         <div class="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/60">
-  <form class="space-y-4" @submit.prevent>
-    <div>
-      <label class="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
-        Bulk Input
-      </label>
+          <form class="space-y-4" @submit.prevent>
+            <div>
+              <label class="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
+                Bulk Input
+              </label>
 
-      <textarea
-        v-model="bulkForm.bulk_input"
-        rows="14"
-        class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-4 text-sm text-slate-900 outline-none focus:border-cyan-500 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
-        placeholder="tiktok|cs2fps|bucket-1234|CS2 launch options"
-      />
+              <textarea
+                v-model="bulkForm.bulk_input"
+                rows="14"
+                class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-4 text-sm text-slate-900 outline-none focus:border-cyan-500 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                placeholder="tiktok|cs2fps|bucket-1234|CS2 launch options"
+              />
 
-      <div v-if="bulkForm.errors.bulk_input" class="mt-2 text-sm text-rose-500">
-        {{ bulkForm.errors.bulk_input }}
-      </div>
-    </div>
+              <div v-if="bulkForm.errors.bulk_input" class="mt-2 text-sm text-rose-500">
+                {{ bulkForm.errors.bulk_input }}
+              </div>
+            </div>
 
+            <div
+              v-if="importPreview"
+              ref="importPreviewRef"
+              class="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900"
+            >
+              <div class="text-lg font-black text-slate-900 dark:text-white">
+                Import Preview
+              </div>
+
+              <div class="mt-4 grid gap-3 sm:grid-cols-5">
+                <div class="rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950/60">
+                  <div class="text-xs uppercase tracking-[0.15em] text-slate-500 dark:text-slate-400">Parsed</div>
+                  <div class="mt-1 text-xl font-black text-slate-900 dark:text-white">
+                    {{ importPreview.summary?.parsed_count || 0 }}
+                  </div>
+                </div>
+
+                <div class="rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950/60">
+                  <div class="text-xs uppercase tracking-[0.15em] text-slate-500 dark:text-slate-400">Safe Import</div>
+                  <div class="mt-1 text-xl font-black text-emerald-600 dark:text-emerald-400">
+                    {{ importPreview.summary?.safe_import_count || 0 }}
+                  </div>
+                </div>
+
+                <div class="rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950/60">
+                  <div class="text-xs uppercase tracking-[0.15em] text-slate-500 dark:text-slate-400">Skipped Duplicates</div>
+                  <div class="mt-1 text-xl font-black text-rose-600 dark:text-rose-400">
+                    {{ importPreview.summary?.skipped_duplicates_count || 0 }}
+                  </div>
+                </div>
+
+                <div class="rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950/60">
+                  <div class="text-xs uppercase tracking-[0.15em] text-slate-500 dark:text-slate-400">Historical Warnings</div>
+                  <div class="mt-1 text-xl font-black text-amber-600 dark:text-amber-400">
+                    {{ importPreview.summary?.historical_warnings_count || 0 }}
+                  </div>
+                </div>
+
+                <div class="rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950/60">
+                  <div class="text-xs uppercase tracking-[0.15em] text-slate-500 dark:text-slate-400">Invalid Rows</div>
+                  <div class="mt-1 text-xl font-black text-rose-600 dark:text-rose-400">
+                    {{ importPreview.summary?.invalid_rows_count || 0 }}
+                  </div>
+                </div>
+              </div>
+
+              <div
+                v-if="importPreview.skipped_duplicates?.length"
+                class="mt-4 rounded-2xl border border-rose-200 bg-rose-50 p-4 dark:border-rose-900/40 dark:bg-rose-950/20"
+              >
+                <div class="text-sm font-black text-rose-700 dark:text-rose-300">
+                  Skipped duplicates from current paste
+                </div>
+
+                <div class="mt-2 space-y-1 text-sm text-rose-700 dark:text-rose-300">
+                  <div
+                    v-for="(item, index) in importPreview.skipped_duplicates"
+                    :key="`dup-${index}`"
+                  >
+                    {{ item.title }}
+                    <span class="opacity-70">({{ item.platform }} · {{ item.content_bucket }})</span>
+                  </div>
+                </div>
+              </div>
+
+              <div
+  v-if="importPreview.invalid_rows?.length"
+  class="mt-4 rounded-2xl border border-rose-200 bg-rose-50 p-4 dark:border-rose-900/40 dark:bg-rose-950/20"
+>
+  <div class="text-sm font-black text-rose-700 dark:text-rose-300">
+    Some rows need a quick fix
+  </div>
+
+  <p class="mt-2 text-sm leading-6 text-rose-700 dark:text-rose-300">
+    Nothing is broken — just check the rows below and try again.
+  </p>
+
+  <div class="mt-4 space-y-3">
     <div
-  v-if="importPreview"
-  ref="importPreviewRef"
-  class="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900"
->
-      <div class="text-lg font-black text-slate-900 dark:text-white">
-        Import Preview
+      v-for="(item, index) in importPreview.invalid_rows"
+      :key="`invalid-${index}`"
+      class="rounded-2xl border border-rose-200 bg-white p-4 dark:border-rose-900/40 dark:bg-slate-950/60"
+    >
+      <div class="text-xs font-black uppercase tracking-[0.14em] text-rose-600 dark:text-rose-400">
+        Line {{ item.line_number }}
       </div>
 
-      <div class="mt-4 grid gap-3 sm:grid-cols-4">
-        <div class="rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950/60">
-          <div class="text-xs uppercase tracking-[0.15em] text-slate-500 dark:text-slate-400">Parsed</div>
-          <div class="mt-1 text-xl font-black text-slate-900 dark:text-white">
-            {{ importPreview.summary?.parsed_count || 0 }}
-          </div>
-        </div>
-
-        <div class="rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950/60">
-          <div class="text-xs uppercase tracking-[0.15em] text-slate-500 dark:text-slate-400">Safe Import</div>
-          <div class="mt-1 text-xl font-black text-emerald-600 dark:text-emerald-400">
-            {{ importPreview.summary?.safe_import_count || 0 }}
-          </div>
-        </div>
-
-        <div class="rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950/60">
-          <div class="text-xs uppercase tracking-[0.15em] text-slate-500 dark:text-slate-400">Skipped Duplicates</div>
-          <div class="mt-1 text-xl font-black text-rose-600 dark:text-rose-400">
-            {{ importPreview.summary?.skipped_duplicates_count || 0 }}
-          </div>
-        </div>
-
-        <div class="rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950/60">
-          <div class="text-xs uppercase tracking-[0.15em] text-slate-500 dark:text-slate-400">Historical Warnings</div>
-          <div class="mt-1 text-xl font-black text-amber-600 dark:text-amber-400">
-            {{ importPreview.summary?.historical_warnings_count || 0 }}
-          </div>
-        </div>
+      <div class="mt-2 rounded-xl bg-rose-50 px-3 py-2 font-mono text-xs leading-6 text-rose-800 break-all dark:bg-rose-950/30 dark:text-rose-200">
+        {{ item.line }}
       </div>
 
-      <div
-        v-if="importPreview.skipped_duplicates?.length"
-        class="mt-4 rounded-2xl border border-rose-200 bg-rose-50 p-4 dark:border-rose-900/40 dark:bg-rose-950/20"
-      >
-        <div class="text-sm font-black text-rose-700 dark:text-rose-300">
-          Skipped duplicates from current paste
-        </div>
-
-        <div class="mt-2 space-y-1 text-sm text-rose-700 dark:text-rose-300">
-          <div
-            v-for="(item, index) in importPreview.skipped_duplicates"
-            :key="`dup-${index}`"
-          >
-            {{ item.title }}
-            <span class="opacity-70">({{ item.platform }} · {{ item.content_bucket }})</span>
-          </div>
-        </div>
+      <div class="mt-3 text-sm font-semibold text-rose-700 dark:text-rose-300">
+        {{ item.reason }}
       </div>
-
-      <div
-  v-if="importPreview.historical_warnings?.length"
-  class="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900/40 dark:bg-amber-950/20"
->
-  <div class="text-sm font-black text-amber-700 dark:text-amber-300">
-    Used before!
+    </div>
   </div>
 
-  <hr class="my-3 border-amber-200 dark:border-amber-800" />
-
-  <ul class="space-y-1 text-sm text-amber-700 dark:text-amber-300">
-    <li
-      v-for="(item, index) in importPreview.historical_warnings"
-      :key="`warn-${index}`"
-      class="leading-6"
-    >
-      - {{ item.title }}
-      <span class="opacity-80">
-        — previously used on {{ item.previously_used_at || 'unknown date' }}
-      </span>
-    </li>
-  </ul>
-
-  <label class="mt-4 flex items-center gap-3 text-sm font-semibold text-amber-700 dark:text-amber-300">
-    <input
-      v-model="allowHistoricalWarnings"
-      type="checkbox"
-      class="h-4 w-4 rounded"
-    />
-    Allow all historical warnings in this import
-  </label>
-
-  <div class="mt-3 flex flex-wrap gap-2">
+  <div class="mt-4 rounded-2xl border border-dashed border-rose-300 bg-white/70 p-4 dark:border-rose-800 dark:bg-slate-950/40">
+    <div class="text-sm font-black text-slate-900 dark:text-white">
+      Need help fixing the rows?
+    </div>
+    <p class="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-400">
+      Copy the problematic rows into ChatGPT and ask it to return only corrected bulk import lines.
+    </p>
     <button
       type="button"
-      @click="allowAllWarningsAndImport"
-      class="rounded-xl bg-amber-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-amber-700"
+      @click="copyInvalidRowsPrompt"
+      class="mt-3 rounded-xl bg-rose-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-rose-700"
     >
-      Allow All Warnings
-    </button>
-
-    <button
-      type="button"
-      @click="declineAllWarningsAndImport"
-      class="rounded-xl border border-amber-300 px-4 py-2 text-sm font-bold text-amber-700 transition hover:bg-amber-100 dark:border-amber-800 dark:text-amber-300 dark:hover:bg-amber-950/30"
-    >
-      Decline All Warnings
+      Copy ChatGPT Fix Prompt
     </button>
   </div>
 </div>
-    </div>
 
-    <div class="flex flex-wrap items-center gap-3 pt-2">
-      <button
-        type="button"
-        :disabled="bulkForm.processing"
-        @click="submitBulk"
-        class="inline-flex items-center rounded-2xl bg-cyan-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-cyan-700 disabled:opacity-60"
-      >
-        {{
-          bulkForm.processing
-            ? 'Importing...'
-            : importPreview && previewConfirmed
-              ? 'Confirm Import'
-              : 'Import Topics'
-        }}
-      </button>
+              <div
+                v-if="importPreview.historical_warnings?.length"
+                class="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900/40 dark:bg-amber-950/20"
+              >
+                <div class="text-sm font-black text-amber-700 dark:text-amber-300">
+                  Used before!
+                </div>
 
-      <button
-        type="button"
-        @click="clearAvailableTopics"
-        class="inline-flex items-center rounded-2xl bg-rose-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-rose-700"
-      >
-        Clear Available Topics
-      </button>
+                <hr class="my-3 border-amber-200 dark:border-amber-800" />
 
-      <button
-        type="button"
-        @click="openMonthlyPlan"
-        class="inline-flex items-center rounded-2xl border border-slate-300 px-4 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
-      >
-        Open Monthly Plan
-      </button>
-    </div>
-  </form>
-</div>
+                <ul class="space-y-1 text-sm text-amber-700 dark:text-amber-300">
+                  <li
+                    v-for="(item, index) in importPreview.historical_warnings"
+                    :key="`warn-${index}`"
+                    class="leading-6"
+                  >
+                    - {{ item.title }}
+                    <span class="opacity-80">
+                      — previously used on {{ item.previously_used_at || 'unknown date' }}
+                    </span>
+                  </li>
+                </ul>
+
+                <label class="mt-4 flex items-center gap-3 text-sm font-semibold text-amber-700 dark:text-amber-300">
+                  <input
+                    v-model="allowHistoricalWarnings"
+                    type="checkbox"
+                    class="h-4 w-4 rounded"
+                  />
+                  Allow all historical warnings in this import
+                </label>
+
+                <div class="mt-3 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    @click="allowAllWarningsAndImport"
+                    class="rounded-xl bg-amber-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-amber-700"
+                  >
+                    Allow All Warnings
+                  </button>
+
+                  <button
+                    type="button"
+                    @click="declineAllWarningsAndImport"
+                    class="rounded-xl border border-amber-300 px-4 py-2 text-sm font-bold text-amber-700 transition hover:bg-amber-100 dark:border-amber-800 dark:text-amber-300 dark:hover:bg-amber-950/30"
+                  >
+                    Decline All Warnings
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-3 pt-2">
+              <button
+                type="button"
+                :disabled="bulkForm.processing"
+                @click="submitBulk"
+                class="inline-flex items-center rounded-2xl bg-cyan-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-cyan-700 disabled:opacity-60"
+              >
+                {{
+                  bulkForm.processing
+                    ? 'Importing...'
+                    : importPreview && previewConfirmed
+                      ? 'Confirm Import'
+                      : 'Import Topics'
+                }}
+              </button>
+
+              <button
+                type="button"
+                @click="clearAvailableTopics"
+                class="inline-flex items-center rounded-2xl bg-rose-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-rose-700"
+              >
+                Clear Available Topics
+              </button>
+
+              <button
+                type="button"
+                @click="openMonthlyPlan"
+                class="inline-flex items-center rounded-2xl border border-slate-300 px-4 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+              >
+                Open Monthly Plan
+              </button>
+            </div>
+          </form>
+        </div>
+
         <div class="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/60">
           <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div>
@@ -697,7 +841,7 @@ watch(
               </p>
             </div>
 
-            <div class="flex flex-wrap gap-2">              
+            <div class="flex flex-wrap gap-2">
               <button
                 type="button"
                 @click="copyContentModel"
@@ -705,7 +849,6 @@ watch(
               >
                 Copy Model
               </button>
-              
             </div>
           </div>
 
@@ -713,7 +856,6 @@ watch(
             {{ contentModelText }}
           </div>
         </div>
-       
       </section>
 
       <section class="space-y-6">
@@ -775,7 +917,6 @@ watch(
                   class="w-full rounded-2xl border border-slate-300 bg-slate-100 px-4 py-3 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
                 />
               </div>
-
             </div>
 
             <div>
@@ -885,31 +1026,32 @@ watch(
         </div>
 
         <div class="rounded-[28px] border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
-          <div class="flex items-center justify-between gap-4">
-            <div>
+          <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+            <div class="min-w-0">
+              <div class="flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  @click="openArchive"
+                  class="inline-flex items-center rounded-2xl border border-slate-300 px-5 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                >
+                  Open Archive
+                </button>
 
-            <button
-              type="button"
-              @click="openArchive"
-              class="inline-flex items-center rounded-2xl border border-slate-300 px-5 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
-            >
-              Open Archive
-            </button>
+                <button
+                  type="button"
+                  @click="resetActiveWorkflow"
+                  class="inline-flex items-center rounded-2xl bg-rose-700 px-5 py-3 text-sm font-bold text-white transition hover:bg-rose-800"
+                >
+                  Reset Active Workflow
+                </button>
+              </div>
 
-              <h2 class="text-2xl font-black tracking-tight text-slate-900 dark:text-white">
+              <h2 class="mt-4 text-2xl font-black tracking-tight text-slate-900 dark:text-white">
                 Content Library
               </h2>
               <p class="mt-2 text-sm text-slate-600 dark:text-slate-400">
                 Only active available topics are shown here.
               </p>
-
-              <button
-              type="button"
-              @click="resetActiveWorkflow"
-              class="inline-flex items-center rounded-2xl bg-rose-700 px-5 py-3 text-sm font-bold text-white transition hover:bg-rose-800"
-            >
-              Reset Active Workflow
-            </button>
             </div>
 
             <div class="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
@@ -917,85 +1059,107 @@ watch(
             </div>
           </div>
 
-          <div v-if="availableTopics.length" class="mt-6 space-y-3">
+          <div v-if="availableTopics.length" class="mt-6 space-y-4">
             <div
               v-for="topic in availableTopics"
               :key="topic.id"
               :class="editingId === topic.id
-                ? 'rounded-2xl border border-cyan-400 bg-cyan-50/40 p-4 dark:border-cyan-700 dark:bg-cyan-950/10'
-                : 'rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/60'"
+                ? 'rounded-2xl border border-cyan-400 bg-cyan-50/40 p-5 dark:border-cyan-700 dark:bg-cyan-950/10'
+                : 'rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-800 dark:bg-slate-950/60'"
             >
-              <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-                <div class="min-w-0 flex-1">
-                  <div class="text-base font-black leading-6 break-words text-slate-900 dark:text-white">
-                    {{ topic.title }}
+              <div class="min-w-0">
+                <div class="text-lg font-black leading-7 break-words text-slate-900 dark:text-white">
+                  {{ topic.title }}
+                </div>
+
+                <div class="mt-3 flex flex-wrap items-start gap-2 text-xs">
+                  <span
+                    v-if="topic.content_bucket"
+                    class="inline-flex max-w-full break-all rounded-lg bg-slate-900 px-2.5 py-1 font-semibold text-white dark:bg-white dark:text-slate-900"
+                  >
+                    {{ topic.content_bucket }}
+                  </span>
+
+                  <span
+                    v-if="topic.shared_content_group"
+                    class="inline-flex rounded-lg bg-emerald-100 px-2.5 py-1 font-semibold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
+                  >
+                    {{ topic.shared_content_group }}
+                  </span>
+
+                  <span
+                    v-if="topic.platform"
+                    class="inline-flex rounded-lg bg-slate-200 px-2.5 py-1 font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                  >
+                    {{ topic.platform }}
+                  </span>
+
+                  <span
+                    v-if="topic.series"
+                    class="inline-flex rounded-lg bg-violet-100 px-2.5 py-1 font-semibold text-violet-700 dark:bg-violet-900/30 dark:text-violet-300"
+                  >
+                    {{ topic.series }}
+                  </span>
+
+                  <span
+                    v-if="topic.voice_tool"
+                    class="inline-flex rounded-lg bg-cyan-100 px-2.5 py-1 font-semibold text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300"
+                  >
+                    {{ topic.voice_tool }}
+                  </span>
+
+                  <span
+                    v-if="topic.category"
+                    class="inline-flex rounded-lg bg-amber-100 px-2.5 py-1 font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
+                  >
+                    {{ topic.category }}
+                  </span>
+
+                  <span
+                    class="inline-flex rounded-lg px-2.5 py-1 font-semibold"
+                    :class="statusClass(topic.status)"
+                  >
+                    {{ topic.status }}
+                  </span>
+                </div>
+
+                <div v-if="topic.caption" class="mt-4 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+                  <div class="text-[11px] font-black uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
+                    Caption
                   </div>
-
-                  <div class="mt-2 flex flex-wrap gap-2 text-xs">
-                    <span
-                      v-if="topic.content_bucket"
-                      class="rounded-full bg-slate-900 px-2.5 py-1 font-semibold text-white dark:bg-white dark:text-slate-900"
-                    >
-                      {{ topic.content_bucket }}
-                    </span>
-
-                    <span
-                      v-if="topic.shared_content_group"
-                      class="rounded-full bg-emerald-100 px-2.5 py-1 font-semibold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
-                    >
-                      {{ topic.shared_content_group }}
-                    </span>
-
-                    <span
-                      v-if="topic.platform"
-                      class="rounded-full bg-slate-200 px-2.5 py-1 font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300"
-                    >
-                      {{ topic.platform }}
-                    </span>
-
-                    <span
-                      v-if="topic.series"
-                      class="rounded-full bg-violet-100 px-2.5 py-1 font-semibold text-violet-700 dark:bg-violet-900/30 dark:text-violet-300"
-                    >
-                      {{ topic.series }}
-                    </span>
-
-                    <span
-                      v-if="topic.voice_tool"
-                      class="rounded-full bg-cyan-100 px-2.5 py-1 font-semibold text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300"
-                    >
-                      {{ topic.voice_tool }}
-                    </span>
-
-                    <span
-                      v-if="topic.category"
-                      class="rounded-full bg-amber-100 px-2.5 py-1 font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
-                    >
-                      {{ topic.category }}
-                    </span>
-
-                    <span
-                      class="rounded-full px-2.5 py-1 font-semibold"
-                      :class="statusClass(topic.status)"
-                    >
-                      {{ topic.status }}
-                    </span>
-                  </div>
-
-                  <div v-if="topic.caption" class="mt-3 text-sm leading-6 text-slate-700 dark:text-slate-300">
+                  <div class="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-slate-700 dark:text-slate-300">
                     {{ topic.caption }}
                   </div>
+                </div>
 
-                  <div v-if="topic.description" class="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-400">
+                <div v-if="topic.description" class="mt-3 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+                  <div class="text-[11px] font-black uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
+                    Description
+                  </div>
+                  <div class="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-slate-700 dark:text-slate-300">
                     {{ topic.description }}
                   </div>
+                </div>
 
-                  <div v-if="topic.hashtags" class="mt-2 text-xs break-words text-cyan-600 dark:text-cyan-400">
+                <div v-if="topic.hashtags" class="mt-3 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+                  <div class="text-[11px] font-black uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
+                    Hashtags
+                  </div>
+                  <div class="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-cyan-600 dark:text-cyan-400">
                     {{ topic.hashtags }}
                   </div>
                 </div>
 
-                <div class="flex w-full flex-wrap items-center gap-2 xl:w-auto xl:max-w-[360px] xl:justify-end">
+                <div v-if="topic.script_notes" class="mt-3 rounded-2xl border border-dashed border-slate-300 bg-slate-100/80 p-4 dark:border-slate-700 dark:bg-slate-900/60">
+                  <div class="text-[11px] font-black uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
+                    Script Notes
+                  </div>
+                  <div class="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-slate-600 dark:text-slate-400">
+                    {{ topic.script_notes }}
+                  </div>
+                </div>
+
+                <div class="mt-4 flex flex-wrap gap-2">
                   <button
                     type="button"
                     @click="startEdit(topic)"
