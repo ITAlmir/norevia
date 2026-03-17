@@ -40,7 +40,7 @@ class MonthlyPlanController extends Controller
         ]);
     }
 
-    public function generate(Request $request)
+  public function generate(Request $request)
 {
     $user = auth()->user();
 
@@ -100,6 +100,7 @@ class MonthlyPlanController extends Controller
     }
 
     $usedTopicIds = [];
+    $usedTopicKeys = [];
     $cursor = $startDate->copy();
 
     while ($cursor->lte($endDate)) {
@@ -126,6 +127,7 @@ class MonthlyPlanController extends Controller
                 $topic = $this->pickNextTopicForBucket(
                     $allTopics,
                     $usedTopicIds,
+                    $usedTopicKeys,
                     $groupBucket
                 );
 
@@ -164,22 +166,22 @@ class MonthlyPlanController extends Controller
                 }
 
                 $usedTopicIds[] = $topic->id;
+                $usedTopicKeys[] = $this->topicUsageKey($topic);
             }
         }
 
         $cursor->addDay();
-}
+    }
 
-$cursor = $startDate->copy();
+    $cursor = $startDate->copy();
 
-while ($cursor->lte($endDate)) {
-    $this->syncTasksForDate($user->id, $cursor->toDateString());
-    $cursor->addDay();
-}
+    while ($cursor->lte($endDate)) {
+        $this->syncTasksForDate($user->id, $cursor->toDateString());
+        $cursor->addDay();
+    }
 
-return redirect()->route('todo.monthly-plan.index');
-}
-    
+    return redirect()->route('todo.monthly-plan.index');
+}  
 
     public function toggleItemStatus(MonthlyPlanItem $item, Request $request)
 {
@@ -354,10 +356,14 @@ private function resolveGroupBucket($profiles): ?string
     return $bucket ?: null;
 }
 
-private function pickNextTopicForBucket($allTopics, array $usedTopicIds, string $bucket): ?ContentTopic
+private function pickNextTopicForBucket($allTopics, array $usedTopicIds, array $usedTopicKeys, string $bucket): ?ContentTopic
 {
-    return $allTopics->first(function ($item) use ($usedTopicIds, $bucket) {
+    return $allTopics->first(function ($item) use ($usedTopicIds, $usedTopicKeys, $bucket) {
         if (in_array($item->id, $usedTopicIds, true)) {
+            return false;
+        }
+
+        if (in_array($this->topicUsageKey($item), $usedTopicKeys, true)) {
             return false;
         }
 
@@ -368,6 +374,11 @@ private function pickNextTopicForBucket($allTopics, array $usedTopicIds, string 
         return !empty($item->content_bucket)
             && strtolower(trim((string) $item->content_bucket)) === strtolower(trim((string) $bucket));
     });
+}
+
+private function topicUsageKey(ContentTopic $topic): string
+{
+    return strtolower(trim((string) $topic->content_bucket)) . '|' . strtolower(trim((string) $topic->title));
 }    
 
     private function syncTasksForDate(int $userId, string $date): void
