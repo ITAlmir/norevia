@@ -145,7 +145,7 @@ const postRowClass = (index) => {
           </div>
         </div>
 
-        <div class="px-6 pb-6 md:px-8 bg-white dark:bg-slate-900/20">
+        <div class="rounded-3xl border border-slate-800 bg-slate-950/40 p-4">
           <AdSense ad-slot="6645163613" />
         </div>
       </div>
@@ -227,4 +227,4 @@ const postRowClass = (index) => {
       </div>
     </div>
   </PublicLayout>
-</template>
+  </template>

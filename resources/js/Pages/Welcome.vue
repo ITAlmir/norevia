@@ -548,7 +548,7 @@
             </Link>
 
             <Link
-              href="/downloads/norevia-startup-manager-lite"
+              href="/downloads/startup-manager-lite"
               class="group/tile rounded-2xl border p-4 transition-all duration-200
                      border-slate-200 bg-white/70 hover:bg-white
                      hover:-translate-y-[2px]

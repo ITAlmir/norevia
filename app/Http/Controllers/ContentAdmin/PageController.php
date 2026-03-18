@@ -244,7 +244,7 @@ if ($type === 'ad') {
 
             'status' => 'required|in:draft,published,archived',
             'page_type' => 'required|in:news,gaming,horoscope,post',
-            'layout' => 'required|in:minimal,classic,magazine,hero',
+            'layout' => 'required|in:minimal,classic,magazine,hero,editorial,story,docs',
 
             'featured_image' => 'nullable|url',
             'image_caption' => 'nullable|string|max:255',
@@ -322,7 +322,7 @@ $validated['content'] = $this->blocksToContent($blocks);
 
             'status' => 'required|in:draft,published,archived',
             'page_type' => 'required|in:news,gaming,horoscope,post',
-            'layout' => 'required|in:minimal,classic,magazine,hero',
+            'layout' => 'required|in:minimal,classic,magazine,hero,editorial,story,docs',
 
             'featured_image' => 'nullable|string',
             'image_caption' => 'nullable|string|max:255',
