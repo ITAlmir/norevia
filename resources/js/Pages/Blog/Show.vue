@@ -192,12 +192,12 @@
                   class="h-20 w-24 shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-slate-100 dark:border-slate-800 dark:bg-slate-950/50"
                 >
                   <img
-                    v-if="r.featured_image"
-                    :src="r.featured_image"
-                    :alt="r.title"
-                    class="h-full w-full object-cover transition duration-300 group-hover:scale-[1.04]"
-                    loading="lazy"
-                  />
+  v-if="getThumb(r)"
+  :src="getThumb(r)"
+  :alt="r.title"
+  class="h-full w-full object-cover transition duration-300 group-hover:scale-[1.04]"
+  loading="lazy"
+/>
                   <div
                     v-else
                     class="flex h-full w-full items-center justify-center text-xl text-slate-400 dark:text-slate-600"
@@ -293,11 +293,23 @@ const formatTopic = (topic) => {
     .replace(/\b\w/g, (m) => m.toUpperCase())
 }
 
+const mediaUrl = (v) => {
+  const s = String(v || '').trim()
+  if (!s) return ''
+
+  if (s.startsWith('data:image')) return s
+  if (s.startsWith('http://') || s.startsWith('https://')) return s
+  if (s.startsWith('/storage/')) return s
+  if (s.startsWith('storage/')) return '/' + s
+
+  return '/storage/' + s.replace(/^\/+/, '')
+}
+
 const getThumb = (p) => {
-  if (p?.featured_image) return p.featured_image
+  if (p?.featured_image) return mediaUrl(p.featured_image)
 
   const firstImg = (p?.blocks || []).find((b) => b?.type === 'image' && b?.src)
-  if (firstImg?.src) return firstImg.src
+  if (firstImg?.src) return mediaUrl(firstImg.src)
 
   return ''
 }
