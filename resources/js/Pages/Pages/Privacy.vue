@@ -35,6 +35,7 @@ const updatedAt = 'February 28, 2026'
             <li class="flex gap-2"><span class="mt-1 h-1.5 w-1.5 rounded-full bg-slate-400 dark:bg-slate-500"></span>Basic technical data (browser type, device type, pages visited)</li>
             <li class="flex gap-2"><span class="mt-1 h-1.5 w-1.5 rounded-full bg-slate-400 dark:bg-slate-500"></span>Cookies/consent preferences (if enabled)</li>
             <li class="flex gap-2"><span class="mt-1 h-1.5 w-1.5 rounded-full bg-slate-400 dark:bg-slate-500"></span>Emails you send us (content + your address)</li>
+            <li class="flex gap-2"><span class="mt-1 h-1.5 w-1.5 rounded-full bg-slate-400 dark:bg-slate-500"></span>Log files (IP addresses, browser type, ISP, date/time stamp, referring/exit pages)</li>
           </ul>
         </section>
 
@@ -47,7 +48,14 @@ const updatedAt = 'February 28, 2026'
           </ul>
         </section>
       </div>
-
+      <section class="mt-4 rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/30 p-6">
+  <h2 class="text-lg font-semibold text-slate-900 dark:text-slate-100">Advertising & Cookies</h2>
+  <p class="mt-2 text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+    Third-party vendors, including Google, use cookies to serve ads based on a user's prior visits to your website or other websites. 
+    Google's use of advertising cookies enables it and its partners to serve ads to your users based on their visit to your sites and/or other sites on the Internet.
+    Users may opt out of personalized advertising by visiting <a href="https://www.google.com/settings/ads" class="underline">Ads Settings</a>.
+  </p>
+</section>
       <section class="mt-4 rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/30 p-6">
         <h2 class="text-lg font-semibold text-slate-900 dark:text-slate-100">Sharing</h2>
         <p class="mt-2 text-sm text-slate-600 dark:text-slate-300 leading-relaxed max-w-3xl">
@@ -63,6 +71,14 @@ const updatedAt = 'February 28, 2026'
           <li class="flex gap-2"><span class="mt-1 h-1.5 w-1.5 rounded-full bg-slate-400 dark:bg-slate-500"></span>You can contact us to request deletion of email conversations where applicable</li>
         </ul>
       </section>
+
+      <section class="mt-4 rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/30 p-6">
+  <h2 class="text-lg font-semibold text-slate-900 dark:text-slate-100">Children's Information</h2>
+  <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">
+    Norevia does not knowingly collect any Personal Identifiable Information from children under the age of 13. 
+    If you think your child provided this kind of information on our website, please contact us immediately.
+  </p>
+</section>
 
       <section class="mt-4 rounded-3xl border border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-900/40 backdrop-blur p-6">
         <h2 class="text-lg font-semibold text-slate-900 dark:text-slate-100">Contact</h2>

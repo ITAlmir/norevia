@@ -197,7 +197,7 @@ function toBullets(block) {
                 v-if="thumb(item)"
                 :src="thumb(item)"
                 class="h-full w-full object-cover"
-                alt="Thumbnail"
+                :alt="item.title + ' - Norevia Technical Tool'"
               />
               <div v-else class="h-full w-full flex items-center justify-center">
                 <div class="text-center">
@@ -287,6 +287,10 @@ function toBullets(block) {
               <div class="mt-4 text-sm text-slate-500 dark:text-slate-400">
                 Clicking <span class="font-semibold text-slate-700 dark:text-slate-200">Download</span> opens the confirmation step.
               </div>
+              <div class="mt-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 text-xs text-slate-500">
+  <p><strong>Security Note:</strong> All files provided on Norevia are scanned for security. We prioritize your system's stability. 
+  By downloading, you agree to our <a href="/privacy" class="underline">Privacy Policy</a> regarding technical data usage.</p>
+</div>
                <!-- PRIME overlays (absolute inside this relative box) -->
   <div v-show="showPayPal" class="pointer-events-none z-30 pointer-events-none">
   <div class="inline-block text-xs font-medium px-3 py-1.5 rounded-full border

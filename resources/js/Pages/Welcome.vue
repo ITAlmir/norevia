@@ -6,7 +6,7 @@
       <section class="relative overflow-hidden rounded-3xl border border-slate-200 bg-white/70 p-6 md:p-10
                       dark:border-slate-800 dark:bg-slate-950/30">
         <!-- subtle glow -->
-        
+        <h1 class="sr-only">Norevia - Creator Collaboration Platform & PC Performance Tools</h1>
 
         <div class="relative">
           
@@ -66,7 +66,7 @@
         </div>
 
         <!-- helper line: shown only when CLOSED -->
-        <div v-if="openId !== 'cs2'" class="mt-2 text-sm text-white/70">
+        <div v-show="openId !== 'cs2'" class="mt-2 text-sm text-white/70">
           Tap to expand <span class="text-white font-semibold">→</span>
         </div>
       </div>
@@ -92,7 +92,7 @@
   leave-from-class="opacity-100 translate-y-0 scale-100"
   leave-to-class="opacity-0 -translate-y-1 scale-[0.99]"
 >
-  <div v-if="openId === 'cs2'" class="relative px-5 md:px-6 pb-6">
+  <div v-show="openId === 'cs2'" class="relative px-5 md:px-6 pb-6">
     <!-- enterprise content frame (clean separation, no mixed colors) -->
     <div
       class="rounded-2xl border border-white/10 bg-black/55 backdrop-blur
@@ -113,6 +113,7 @@
           <div class="mt-5 flex flex-wrap gap-2">
             <Link
   href="/downloads/cs2-performance-system"
+  title="Detailed guide and performance model for CS2 stability"
   class="group relative px-5 py-3 rounded-xl text-sm md:text-base
          font-extrabold text-white transition-all duration-200
          bg-[#ff2a55]
@@ -262,7 +263,7 @@
         </div>
 
         <!-- helper (only closed) -->
-        <div v-if="openId !== 'model'" class="mt-2 text-sm text-white/70">
+        <div v-show="openId !== 'model'" class="mt-2 text-sm text-white/70">
           Tap to expand <span class="text-white font-semibold">→</span>
         </div>
       </div>
@@ -286,7 +287,7 @@
   leave-from-class="opacity-100 translate-y-0 scale-100"
   leave-to-class="opacity-0 -translate-y-1 scale-[0.99]"
 >
-  <div v-if="openId === 'model'" class="relative px-5 md:px-6 pb-6">
+  <div v-show="openId === 'model'" class="relative px-5 md:px-6 pb-6">
     <!-- enterprise content frame -->
     <div
       class="rounded-2xl border border-slate-200 bg-white/80 backdrop-blur
@@ -310,6 +311,7 @@
             <!-- PRIMARY BUTTON (emerald -> subtle “toward thumb”) -->
             <Link
               href="/dashboard"
+              title="Norevia Creator Dashboard for collaboration tracking"
               class="group relative px-5 py-3 rounded-xl text-sm md:text-base
                      font-extrabold text-white transition-all duration-200
                      bg-emerald-600 hover:bg-emerald-700
@@ -333,6 +335,7 @@
             <!-- SECONDARY -->
             <Link
               href="/downloads"
+              title="Comprehensive collection of PC optimization and workflow tools"
               class="px-5 py-3 rounded-xl text-sm md:text-base font-bold border transition
                      border-slate-300 text-slate-900 bg-white hover:bg-slate-100
                      dark:border-slate-700 dark:text-slate-100 dark:bg-white/5 dark:hover:bg-white/10"
@@ -438,7 +441,7 @@
           <span class="text-white/45">•</span>
           <span class="text-white/70">FREE TOOLS • ORGANIZE • OPTIMIZE</span>
         </div>
-
+        
         <!-- TITLE -->
         <div
           class="mt-1 font-black tracking-tight text-2xl md:text-3xl"
@@ -450,7 +453,7 @@
         </div>
 
         <!-- helper (only closed) -->
-        <div v-if="openId !== 'opt'" class="mt-2 text-sm text-white/70">
+        <div v-show="openId !== 'opt'" class="mt-2 text-sm text-white/70">
           Tap to expand <span class="text-white font-semibold">→</span>
         </div>
       </div>
@@ -474,7 +477,7 @@
   leave-from-class="opacity-100 translate-y-0 scale-100"
   leave-to-class="opacity-0 -translate-y-1 scale-[0.99]"
 >
-  <div v-if="openId === 'opt'" class="relative px-5 md:px-6 pb-6">
+  <div v-show="openId === 'opt'" class="relative px-5 md:px-6 pb-6">
     <div
       class="rounded-2xl border border-slate-200 bg-white/80 backdrop-blur
              shadow-[0_20px_60px_-35px_rgba(0,0,0,0.35)]
@@ -592,6 +595,13 @@
 
       <hr class="my-12 border-slate-200 dark:border-slate-800" />
 
+      <section class="mb-10 max-w-5xl border-l-4 border-slate-300 dark:border-slate-700 pl-6 py-4">
+        <p class="text-lg text-slate-700 dark:text-slate-300 leading-relaxed italic">
+          Our platform provides high-performance models and technical documentation for digital creators. 
+          From optimizing your system for Counter-Strike 2 to managing complex brand collaborations, 
+          Norevia serves as a centralized hub for improving technical efficiency and professional workflow consistency.
+        </p>
+      </section>
       <!-- WHAT IS NOREVIA -->
       <section class="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
         <div class="md:col-span-5">
@@ -632,6 +642,8 @@
       </section>
 
       <hr class="my-12 border-slate-200 dark:border-slate-800" />
+
+
 
       <!-- LATEST DOWNLOADS -->
       <section class="rounded-3xl border border-slate-200 bg-white/70 p-6 md:p-8
@@ -730,7 +742,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, defineComponent } from 'vue'
 import { usePage, Link } from '@inertiajs/vue3'
 import axios from 'axios'
 import MainLayout from '@/Layouts/MainLayout.vue'
@@ -756,41 +768,33 @@ async function fetchLatestDownloads() {
 
 onMounted(fetchLatestDownloads)
 
-// local tiny components (keep Welcome clean)
-const FeatureCard = (props) => null
-const HubCard = (props) => null
-</script>
+// Definisanje komponenti direktno u setup-u da sve bude na jednom mestu
+const FeatureCard = defineComponent({
+  props: { icon: String, title: String, desc: String },
+  template: `
+    <div class="rounded-2xl border p-5 bg-white/70 border-slate-200
+                dark:bg-slate-950/30 dark:border-slate-800">
+      <div class="text-3xl">{{ icon }}</div>
+      <div class="mt-2 font-bold text-slate-900 dark:text-white">{{ title }}</div>
+      <div class="mt-1 text-sm text-slate-600 dark:text-slate-300">{{ desc }}</div>
+    </div>
+  `,
+})
 
-<script>
-export default {
-  components: {
-    FeatureCard: {
-      props: { icon: String, title: String, desc: String },
-      template: `
-        <div class="rounded-2xl border p-5 bg-white/70 border-slate-200
-                    dark:bg-slate-950/30 dark:border-slate-800">
-          <div class="text-3xl">{{ icon }}</div>
-          <div class="mt-2 font-bold text-slate-900 dark:text-white">{{ title }}</div>
-          <div class="mt-1 text-sm text-slate-600 dark:text-slate-300">{{ desc }}</div>
-        </div>
-      `,
-    },
-    HubCard: {
-      props: { href: String, icon: String, title: String, desc: String },
-      template: `
-        <a :href="href"
-          class="group rounded-2xl border p-5 transition
-                 bg-white border-slate-200 hover:bg-slate-50 hover:-translate-y-[1px]
-                 dark:bg-slate-950/40 dark:border-slate-800 dark:hover:bg-slate-900/40">
-          <div class="text-2xl">{{ icon }}</div>
-          <div class="mt-2 font-semibold text-slate-900 dark:text-white">{{ title }}</div>
-          <div class="mt-1 text-sm text-slate-600 dark:text-slate-300">{{ desc }}</div>
-          <div class="mt-4 text-sm font-semibold text-slate-900 dark:text-slate-100">
-            Open hub <span class="transition group-hover:translate-x-0.5 inline-block">→</span>
-          </div>
-        </a>
-      `,
-    },
-  },
-}
+const HubCard = defineComponent({
+  props: { href: String, icon: String, title: String, desc: String },
+  template: `
+    <a :href="href"
+      class="group rounded-2xl border p-5 transition
+             bg-white border-slate-200 hover:bg-slate-50 hover:-translate-y-[1px]
+             dark:bg-slate-950/40 dark:border-slate-800 dark:hover:bg-slate-900/40">
+      <div class="text-2xl">{{ icon }}</div>
+      <div class="mt-2 font-semibold text-slate-900 dark:text-white">{{ title }}</div>
+      <div class="mt-1 text-sm text-slate-600 dark:text-slate-300">{{ desc }}</div>
+      <div class="mt-4 text-sm font-semibold text-slate-900 dark:text-slate-100">
+        Open hub <span class="transition group-hover:translate-x-0.5 inline-block">→</span>
+      </div>
+    </a>
+  `,
+})
 </script>

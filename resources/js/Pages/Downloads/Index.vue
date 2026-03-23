@@ -49,7 +49,10 @@ const grouped = computed(() => {
     <div class="max-w-7xl mx-auto px-4 py-10">
       <div class="mb-6">
         <h1 class="text-3xl font-bold ui-page-title">Downloads</h1>
-        <p class="ui-page-subtitle mt-1">Clean, practical tools with a dedicated download confirmation page.</p>
+        <p class="ui-page-subtitle mt-1 italic text-slate-500">
+  Explore our collection of technical resources, performance models, and professional utilities designed for digital creators and system optimization. 
+  Every tool is verified for integrity and performance consistency.
+</p>
         <AdSense />
       </div>
 
@@ -186,12 +189,7 @@ const grouped = computed(() => {
                   Download <span class="opacity-90">→</span>
                 </Link>
               </div>
-            </div>
-            <div class="shrink-0 flex flex-col items-end gap-2">
-                <div class="text-xs text-slate-500 dark:text-slate-400 hidden sm:block">
-            <AdSense />
-                  </div>
-            </div>
+            </div>           
             <div class="mt-3 text-xs text-slate-500 dark:text-slate-400">
               {{ d.download_count ?? 0 }} downloads • <span class="group-hover:underline">Open details →</span>
             </div>
