@@ -130,11 +130,11 @@ function formatTextSafe(text) {
 
   const raw = String(text)
 
+  // Ako već ima HTML (npr <br>, <strong>, itd) — NE DIRAJ
   if (/<[a-z][\s\S]*>/i.test(raw)) {
     return raw
       .replace(/\r\n/g, '\n')
       .replace(/\r/g, '\n')
-      .replace(/\n/g, '<br>')
   }
 
   return wrapPlainTextToHtml(raw)
