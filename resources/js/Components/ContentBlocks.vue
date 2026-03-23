@@ -69,6 +69,11 @@ function escapeHtml(s) {
     .replace(/>/g, '&gt;')
 }
 
+function restoreKnownBreaks(s) {
+  return String(s)
+    .replace(/&lt;br\s*\/?&gt;/gi, '<br>')
+}
+
 function linkify(text) {
   const urlRe = /((https?:\/\/|www\.)[^\s<]+)/gi
   return text.replace(urlRe, (match) => {
@@ -112,6 +117,7 @@ function wrapPlainTextToHtml(text) {
       const items = lines.map((line) => {
         const item = line.replace(/^[-*•]\s+/, '')
         let safe = escapeHtml(item)
+        safe = restoreKnownBreaks(safe)
         safe = decorateInlineText(safe)
         return `<li>${safe}</li>`
       }).join('')
@@ -119,6 +125,7 @@ function wrapPlainTextToHtml(text) {
     }
 
     let paragraph = escapeHtml(lines.join('<br>'))
+    paragraph = restoreKnownBreaks(paragraph)
     paragraph = decorateInlineText(paragraph)
 
     return `<p>${paragraph}</p>`
@@ -129,12 +136,13 @@ function formatTextSafe(text) {
   if (!text) return ''
 
   const raw = String(text)
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
 
-  // Ako već ima HTML (npr <br>, <strong>, itd) — NE DIRAJ
-  if (/<[a-z][\s\S]*>/i.test(raw)) {
+  // Ako već sadrži pravi HTML ili literalne <br> tagove, tretiraj kao HTML
+  if (/<[a-z][\s\S]*>/i.test(raw) || /&lt;br\s*\/?&gt;/i.test(raw)) {
     return raw
-      .replace(/\r\n/g, '\n')
-      .replace(/\r/g, '\n')
+      .replace(/&lt;br\s*\/?&gt;/gi, '<br>')
   }
 
   return wrapPlainTextToHtml(raw)
