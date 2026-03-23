@@ -62,14 +62,24 @@ class BlogController extends Controller
 
         // related posts for internal linking
         $related = Page::query()
-            ->published()
-            ->blog()
-            ->where('topic', $topic)
-            ->where('id', '!=', $page->id)
-            ->orderByDesc('published_at')
-            ->select('title','slug','topic')
-            ->limit(8)
-            ->get();
+    ->published()
+    ->blog()
+    ->where('topic', $topic)
+    ->where('id', '!=', $page->id)
+    ->orderByDesc('published_at')
+    ->select(
+        'id',
+        'title',
+        'slug',
+        'topic',
+        'published_at',
+        'meta_description',
+        'excerpt',
+        'featured_image',
+        'blocks'
+    )
+    ->limit(8)
+    ->get();
 
         $path = "/blog/{$page->topic}/{$page->slug}";
 $canonical = rtrim(config('app.url'), '/') . $path;
