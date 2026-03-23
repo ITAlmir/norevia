@@ -293,6 +293,15 @@ const formatTopic = (topic) => {
     .replace(/\b\w/g, (m) => m.toUpperCase())
 }
 
+const getThumb = (p) => {
+  if (p?.featured_image) return p.featured_image
+
+  const firstImg = (p?.blocks || []).find((b) => b?.type === 'image' && b?.src)
+  if (firstImg?.src) return firstImg.src
+
+  return ''
+}
+
 const showUpdatedDate = computed(() => {
   if (!props.page?.updated_at || !props.page?.published_at) return false
 
