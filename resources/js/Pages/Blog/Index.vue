@@ -17,6 +17,8 @@ const hubs = [
     href: '/blog/cs2',
     icon: '🎯',
     accent: 'from-cyan-500/20 to-blue-500/20',
+    latestRow:
+      'bg-cyan-50/70 hover:bg-cyan-50 dark:bg-slate-900/40 dark:hover:bg-slate-900/70',
   },
   {
     key: 'pc-optimization',
@@ -25,6 +27,8 @@ const hubs = [
     href: '/blog/pc-optimization',
     icon: '⚡',
     accent: 'from-emerald-500/20 to-lime-500/20',
+    latestRow:
+      'bg-emerald-50/70 hover:bg-emerald-50 dark:bg-slate-900/40 dark:hover:bg-slate-900/70',
   },
   {
     key: 'creator-tools',
@@ -33,6 +37,8 @@ const hubs = [
     href: '/blog/creator-tools',
     icon: '🎬',
     accent: 'from-fuchsia-500/20 to-pink-500/20',
+    latestRow:
+      'bg-fuchsia-50/70 hover:bg-fuchsia-50 dark:bg-slate-900/40 dark:hover:bg-slate-900/70',
   },
 ]
 
@@ -46,16 +52,28 @@ const latestGaming = computed(() =>
   (props.latest || []).filter(p => p?.page_type === 'gaming' && p?.topic)
 )
 
-const excerpt = (p) => (p?.meta_description || p?.excerpt || '').toString()
+const excerpt = (p) =>
+  (p?.meta_description || p?.excerpt || 'Practical guide with clear steps, useful settings, and related resources.')
+    .toString()
 
-const rowClasses = (index) => {
-  const variants = [
-    'bg-slate-50/90 dark:bg-slate-900/30',
-    'bg-blue-50/70 dark:bg-slate-900/50',
-    'bg-emerald-50/70 dark:bg-slate-900/30',
-    'bg-violet-50/70 dark:bg-slate-900/50',
-  ]
-  return variants[index % variants.length]
+const topicLabel = (topic) => {
+  if (!topic) return 'Blog'
+
+  const labels = {
+    cs2: 'CS2',
+    'pc-optimization': 'PC Optimization',
+    'creator-tools': 'Creator Tools',
+    gaming: 'Gaming',
+  }
+
+  return labels[String(topic)] || String(topic)
+}
+
+const rowClasses = (post) => {
+  const topic = String(post?.topic || '').toLowerCase()
+  const hub = hubs.find(h => h.key === topic)
+
+  return hub?.latestRow || 'bg-slate-50/90 hover:bg-slate-100 dark:bg-slate-900/30 dark:hover:bg-slate-900/60'
 }
 </script>
 
@@ -110,29 +128,27 @@ const rowClasses = (index) => {
       </div>
 
       <!-- Intro / Editorial description -->
-<div class="mt-8 rounded-2xl border p-6
-            border-slate-200 bg-white
-            dark:border-slate-800 dark:bg-slate-900/30">
+      <div class="mt-8 rounded-2xl border p-6
+                  border-slate-200 bg-white
+                  dark:border-slate-800 dark:bg-slate-900/30">
+        <h2 class="text-xl font-semibold text-slate-900 dark:text-white">
+          About Norevia Guides
+        </h2>
 
-  <h2 class="text-xl font-semibold text-slate-900 dark:text-white">
-    About Norevia Guides
-  </h2>
+        <p class="mt-3 text-slate-600 dark:text-slate-400 leading-relaxed">
+          Norevia provides practical guides focused on gaming performance, PC optimization,
+          and productivity tools for content creators. Our articles are designed to help
+          players improve FPS, reduce system latency, and optimize their hardware for
+          competitive games such as Counter-Strike 2.
+        </p>
 
-  <p class="mt-3 text-slate-600 dark:text-slate-400 leading-relaxed">
-    Norevia provides practical guides focused on gaming performance, PC optimization, 
-    and productivity tools for content creators. Our articles are designed to help 
-    players improve FPS, reduce system latency, and optimize their hardware for 
-    competitive games such as Counter-Strike 2.
-  </p>
-
-  <p class="mt-3 text-slate-600 dark:text-slate-400 leading-relaxed">
-    In addition to gaming optimization, Norevia also covers creator workflows 
-    including gameplay recording, video editing, AI voice generation, and publishing 
-    strategies. Each guide focuses on practical solutions that can help gamers and 
-    creators build faster, more efficient setups.
-  </p>
-
-</div>
+        <p class="mt-3 text-slate-600 dark:text-slate-400 leading-relaxed">
+          In addition to gaming optimization, Norevia also covers creator workflows
+          including gameplay recording, video editing, AI voice generation, and publishing
+          strategies. Each guide focuses on practical solutions that can help gamers and
+          creators build faster, more efficient setups.
+        </p>
+      </div>
 
       <!-- Hubs -->
       <div class="mt-8">
@@ -148,8 +164,8 @@ const rowClasses = (index) => {
             v-for="h in hubs"
             :key="h.key"
             :href="h.href"
-            class="group rounded-2xl border overflow-hidden transition
-                   border-slate-200 bg-white hover:shadow-lg hover:-translate-y-0.5
+            class="group rounded-2xl border overflow-hidden transition duration-300
+                   border-slate-200 bg-white hover:shadow-xl hover:-translate-y-1
                    dark:border-slate-800 dark:bg-slate-900/30"
           >
             <div
@@ -158,7 +174,9 @@ const rowClasses = (index) => {
             />
             <div class="p-5">
               <div class="flex items-center justify-between gap-3">
-                <div class="text-2xl">{{ h.icon }}</div>
+                <div class="text-2xl transition-transform duration-300 group-hover:scale-110">
+                  {{ h.icon }}
+                </div>
                 <span class="text-[11px] px-2 py-1 rounded-full border
                              border-slate-300 text-slate-700
                              dark:border-slate-700 dark:text-slate-300">
@@ -198,7 +216,9 @@ const rowClasses = (index) => {
       <!-- Latest -->
       <div class="mt-10">
         <div class="flex items-center justify-between">
-          <h2 class="text-xl md:text-2xl font-semibold text-slate-900 dark:text-white">Latest posts</h2>
+          <h2 class="text-xl md:text-2xl font-semibold text-slate-900 dark:text-white">
+            Latest posts
+          </h2>
           <a href="/blog/cs2" class="text-sm text-slate-600 hover:underline dark:text-slate-400">
             Browse hubs →
           </a>
@@ -206,28 +226,55 @@ const rowClasses = (index) => {
 
         <div class="mt-4 rounded-2xl border overflow-hidden border-slate-200 dark:border-slate-800">
           <Link
-            v-for="(p, index) in latestGaming"
+            v-for="p in latestGaming"
             :key="p.id"
             :href="p.topic ? `/blog/${p.topic}/${p.slug}` : `/pages/${p.slug}`"
-            class="group block border-b last:border-b-0 border-slate-200 dark:border-slate-800 transition hover:bg-white dark:hover:bg-slate-900/60"
-            :class="rowClasses(index)"
+            class="group block border-b last:border-b-0 border-slate-200 dark:border-slate-800
+                   transition duration-300 hover:-translate-y-0.5 hover:shadow-md"
+            :class="rowClasses(p)"
           >
             <div class="p-5 md:p-6 flex flex-col md:flex-row md:items-center gap-4 md:gap-6">
-              <div class="md:w-44 shrink-0">
-                <div class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                  {{ p.topic || 'blog' }}
-                </div>
-                <div class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                  Article
+              <div
+                class="shrink-0 h-24 w-full md:h-20 md:w-32 rounded-2xl overflow-hidden border
+                       border-slate-200 bg-white shadow-sm
+                       dark:border-slate-700 dark:bg-slate-900/60"
+              >
+                <img
+                  v-if="p.featured_image"
+                  :src="p.featured_image"
+                  :alt="p.title"
+                  class="h-full w-full object-cover transition duration-300 group-hover:scale-[1.04]"
+                  loading="lazy"
+                />
+                <div
+                  v-else
+                  class="h-full w-full flex items-center justify-center text-2xl text-slate-400 dark:text-slate-500"
+                >
+                  🖼️
                 </div>
               </div>
 
               <div class="min-w-0 flex-1">
-                <div class="text-lg font-semibold text-slate-900 dark:text-white group-hover:underline">
+                <div class="flex flex-wrap items-center gap-2 text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                  <span>{{ topicLabel(p.topic) }}</span>
+                  <span>•</span>
+                  <span>
+                    {{
+                      new Date(p.published_at || Date.now()).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                      })
+                    }}
+                  </span>
+                </div>
+
+                <div class="mt-2 text-lg font-semibold text-slate-900 dark:text-white group-hover:underline">
                   {{ p.title }}
                 </div>
+
                 <div class="mt-2 text-sm text-slate-600 dark:text-slate-400 line-clamp-2">
-                  {{ excerpt(p) || 'Read more…' }}
+                  {{ excerpt(p) }}
                 </div>
               </div>
 
@@ -252,7 +299,9 @@ const rowClasses = (index) => {
                   dark:from-slate-900/40 dark:via-slate-900/20 dark:to-slate-900/40 dark:border-slate-800">
         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <div class="text-lg font-semibold text-slate-900 dark:text-white">Need tools, not only guides?</div>
+            <div class="text-lg font-semibold text-slate-900 dark:text-white">
+              Need tools, not only guides?
+            </div>
             <div class="mt-1 text-slate-600 dark:text-slate-400">
               Go to Downloads: CS2 tools, Windows utilities, optimization helpers.
             </div>

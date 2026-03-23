@@ -191,7 +191,7 @@ const postRowClass = (index) => {
               </div>
 
               <div class="mt-2 text-sm text-slate-600 dark:text-slate-400 line-clamp-2">
-                {{ p.meta_description || 'Open to read the full post.' }}
+                {{ p.meta_description || p.excerpt || 'Practical guide with steps, settings, and performance tips.' }}
               </div>
             </div>
 

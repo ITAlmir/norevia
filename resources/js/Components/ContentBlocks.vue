@@ -130,7 +130,6 @@ function formatTextSafe(text) {
 
   const raw = String(text)
 
-  // If editor already inserted HTML, keep it.
   if (/<[a-z][\s\S]*>/i.test(raw)) {
     return raw
       .replace(/\r\n/g, '\n')
@@ -161,15 +160,13 @@ function ctaClass(variant = 'primary') {
 </script>
 
 <template>
-  <div v-if="hasBlocks()" class="space-y-6">
+  <div v-if="hasBlocks()" class="space-y-5">
     <template v-for="(b, i) in blocksSafe" :key="i">
       <!-- TEXT BLOCK -->
       <div
         v-if="b.type === 'text'"
         :class="[
-          'rounded-3xl border p-5 md:p-6',
-          'border-slate-200 bg-white/95 text-slate-900 shadow-sm',
-          'dark:border-slate-800 dark:bg-slate-950/50 dark:text-slate-100',
+          'p-0 text-slate-900 dark:text-slate-100',
           cardClass
         ]"
       >
@@ -186,9 +183,9 @@ function ctaClass(variant = 'primary') {
       <div
         v-else-if="b.type === 'cta' && b.url"
         :class="[
-          'rounded-3xl border p-5 md:p-6',
-          'border-slate-200 bg-white/95 text-slate-900 shadow-sm',
-          'dark:border-slate-800 dark:bg-slate-950/50 dark:text-slate-100',
+          'rounded-3xl p-5 md:p-6',
+          'bg-slate-50 text-slate-900',
+          'dark:bg-slate-900/40 dark:text-slate-100',
           cardClass
         ]"
       >
@@ -229,12 +226,12 @@ function ctaClass(variant = 'primary') {
       <!-- IMAGE BLOCK -->
       <figure
         v-else-if="b.type === 'image' && b.src"
-        class="rounded-3xl border border-slate-200 bg-white/95 p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950/50"
+        class="rounded-3xl bg-transparent p-0"
       >
         <img
           :src="mediaUrl(b.src)"
           :alt="b.caption || 'Image'"
-          class="w-full max-h-[34rem] object-cover rounded-2xl"
+          class="w-full max-h-[34rem] object-cover rounded-2xl shadow-sm"
           loading="lazy"
         />
         <figcaption
@@ -245,34 +242,34 @@ function ctaClass(variant = 'primary') {
       </figure>
 
       <!-- AD / BANNER BLOCK -->
-<div v-else-if="b.type === 'ad'" class="my-8">
-  <div v-if="b.note" class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-3">
-    {{ b.note }}
-  </div>
+      <div v-else-if="b.type === 'ad'" class="my-8">
+        <div v-if="b.note" class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-3">
+          {{ b.note }}
+        </div>
 
-  <!-- AdSense -->
-  <div v-if="b.kind === 'adsense' && b.adsense_slot" class="overflow-hidden">
-    <ins
-      class="adsbygoogle"
-      style="display:block"
-      data-ad-client="ca-pub-4474320596321568"
-      :data-ad-slot="b.adsense_slot"
-      data-ad-format="auto"
-      data-full-width-responsive="true"
-    ></ins>
-  </div>
+        <!-- AdSense -->
+        <div v-if="b.kind === 'adsense' && b.adsense_slot" class="overflow-hidden">
+          <ins
+            class="adsbygoogle"
+            style="display:block"
+            data-ad-client="ca-pub-4474320596321568"
+            :data-ad-slot="b.adsense_slot"
+            data-ad-format="auto"
+            data-full-width-responsive="true"
+          ></ins>
+        </div>
 
-  <!-- Affiliate / HTML -->
-  <div
-    v-else-if="b.html"
-    class="prose max-w-none prose-slate dark:prose-invert"
-    v-html="b.html"
-  ></div>
+        <!-- Affiliate / HTML -->
+        <div
+          v-else-if="b.html"
+          class="prose max-w-none prose-slate dark:prose-invert"
+          v-html="b.html"
+        ></div>
 
-  <div v-else class="text-sm text-slate-500 dark:text-slate-400">
-    Ad block not configured.
-  </div>
-</div>
+        <div v-else class="text-sm text-slate-500 dark:text-slate-400">
+          Ad block not configured.
+        </div>
+      </div>
 
       <!-- UNKNOWN -->
       <div v-else class="text-sm text-slate-500 dark:text-slate-400">
@@ -284,7 +281,7 @@ function ctaClass(variant = 'primary') {
   <!-- Fallback -->
   <div
     v-else
-    class="rounded-3xl border p-5 md:p-6 border-slate-200 bg-white/95 text-slate-900 shadow-sm dark:border-slate-800 dark:bg-slate-950/50 dark:text-slate-100"
+    class="p-0 text-slate-900 dark:text-slate-100"
   >
     <div
       class="content-prose prose max-w-none break-words prose-slate dark:prose-invert"
