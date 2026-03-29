@@ -75,7 +75,7 @@ class ContentLibraryController extends Controller
     return response()->json($preview);
 }
 
-    public function store(Request $request)
+public function store(Request $request)
 {
     $request->validate([
         'bulk_input' => ['required', 'string'],
@@ -92,9 +92,14 @@ class ContentLibraryController extends Controller
     $preview = $this->parseBulkInput($request->bulk_input, auth()->id());
 
     if (!empty($preview['invalid_rows'])) {
-        return back()->withErrors([
-            'bulk_input' => 'Some topics need a quick fix before import. Make sure each topic is on its own line and fields are separated with |.',
-        ])->with('import_preview', $preview);
+        return back()
+            ->withErrors([
+                'bulk_input' => 'Some topics need a quick fix before import. Review the highlighted lines below.',
+            ])
+            ->with([
+                'import_preview' => $preview,
+                'bulk_input' => $request->bulk_input,
+            ]);
     }
 
     $rowsToInsert = collect($preview['ready_rows'])
@@ -116,7 +121,9 @@ class ContentLibraryController extends Controller
         ContentTopic::insert($rowsToInsert);
     }
 
-    return back();
+    return back()->with([
+        'import_preview' => $preview,
+    ]);
 }
 
     public function update(Request $request, ContentTopic $topic)
@@ -231,6 +238,24 @@ class ContentLibraryController extends Controller
         }
 
         $parsed = $this->parseBulkLine($line);
+
+        if (!($parsed['valid'] ?? false)) {
+            $invalidRows[] = [
+                'line_number' => $lineNumber,
+                'line' => $line,
+                'reason' => $parsed['error'] ?? 'Invalid format.',
+            ];
+            continue;
+        }
+
+        if (!$this->userHasActiveBucket($userId, $parsed['content_bucket'] ?? null)) {
+            $invalidRows[] = [
+                'line_number' => $lineNumber,
+                'line' => $line,
+                'reason' => 'This content bucket does not match any active publishing profile for your account.',
+            ];
+            continue;
+        }
 
         if (!($parsed['valid'] ?? false)) {
             $invalidRows[] = [
@@ -717,5 +742,20 @@ private function looksLikeMergedRow(
         }
 
         return 'general';
+    }
+
+        private function userHasActiveBucket(int $userId, ?string $bucket): bool
+    {
+        $bucket = trim((string) $bucket);
+
+        if ($bucket === '') {
+            return false;
+        }
+
+        return PublishingProfile::query()
+            ->where('user_id', $userId)
+            ->where('is_active', true)
+            ->whereRaw('LOWER(content_bucket) = ?', [strtolower($bucket)])
+            ->exists();
     }
 }

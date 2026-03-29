@@ -2,7 +2,7 @@
 import TodoLayout from '@/Layouts/TodoLayout.vue'
 import { useForm, router } from '@inertiajs/vue3'
 import { useUiFeedback } from '@/Composables/useUiFeedback'
-import { computed, ref, watch, nextTick } from 'vue'
+import { computed, ref, watch, nextTick, onMounted } from 'vue'
 
 const props = defineProps({
   topics: {
@@ -29,6 +29,8 @@ const previewConfirmed = ref(false)
 const importMode = ref('idle')
 const importPreviewRef = ref(null)
 const invalidRowsRef = ref(null)
+const bulkInputRef = ref(null)
+const previewOutdated = ref(false)
 
 const editForm = useForm({
   title: '',
@@ -360,6 +362,7 @@ const runImportPreview = async () => {
     const data = await response.json()
     importPreview.value = data
     previewConfirmed.value = true
+    previewOutdated.value = false
 
     return data
   } catch (error) {
@@ -431,6 +434,30 @@ const allowAllWarningsAndImport = () => {
 const declineAllWarningsAndImport = () => {
   allowHistoricalWarnings.value = false
   confirmImport()
+}
+
+const removeAllInvalidLines = () => {
+  const invalidLineNumbers = new Set(
+    (importPreview.value?.invalid_rows || []).map(item => item.line_number)
+  )
+
+  if (!invalidLineNumbers.size) {
+    showToast('No invalid lines to remove.', 'error')
+    return
+  }
+
+  const cleanedLines = bulkLines.value.filter((_, index) => {
+    return !invalidLineNumbers.has(index + 1)
+  })
+
+  bulkForm.bulk_input = cleanedLines.join('\n')
+
+  importPreview.value = null
+  allowHistoricalWarnings.value = false
+  previewConfirmed.value = false
+  importMode.value = 'idle'
+
+  showToast('Invalid lines removed.', 'success')
 }
 
 const activeProfilesForModel = computed(() => {
@@ -587,12 +614,70 @@ const copyInvalidRowsPrompt = async () => {
 watch(
   () => bulkForm.bulk_input,
   () => {
-    importPreview.value = null
+    if (importPreview.value) {
+      previewOutdated.value = true
+    }
+
     allowHistoricalWarnings.value = false
     previewConfirmed.value = false
     importMode.value = 'idle'
   }
 )
+
+onMounted(() => {
+  const page = window?.history?.state?.page || null
+
+  if (page?.props?.flash?.import_preview) {
+    importPreview.value = page.props.flash.import_preview
+  }
+
+  if (page?.props?.flash?.bulk_input && !bulkForm.bulk_input) {
+    bulkForm.bulk_input = page.props.flash.bulk_input
+  }
+})
+
+const bulkLines = computed(() => {
+  return String(bulkForm.bulk_input || '')
+    .split(/\r\n|\r|\n/)
+})
+
+const invalidRowsMap = computed(() => {
+  const map = {}
+
+  for (const row of (importPreview.value?.invalid_rows || [])) {
+    map[row.line_number] = row
+  }
+
+  return map
+})
+
+const hasInvalidRows = computed(() => {
+  return (importPreview.value?.invalid_rows || []).length > 0
+})
+
+const activeInvalidRowsMap = computed(() => {
+  if (previewOutdated.value) {
+    return {}
+  }
+
+  const map = {}
+
+  for (const row of (importPreview.value?.invalid_rows || [])) {
+    map[row.line_number] = row
+  }
+
+  return map
+})
+
+const syncBulkHighlightScroll = () => {
+  const textarea = bulkInputRef.value
+  const highlight = document.getElementById('bulk-highlight-layer')
+
+  if (!textarea || !highlight) return
+
+  highlight.scrollTop = textarea.scrollTop
+  highlight.scrollLeft = textarea.scrollLeft
+}
 </script>
 
 <template>
@@ -638,16 +723,32 @@ watch(
                 Bulk Input
               </label>
 
-              <textarea
-                v-model="bulkForm.bulk_input"
-                rows="14"
-                class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-4 text-sm text-slate-900 outline-none focus:border-cyan-500 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
-                placeholder="tiktok|cs2fps|bucket-1234|CS2 launch options"
-              />
+              <div class="relative overflow-hidden rounded-2xl border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-950">
+  <pre
+  id="bulk-highlight-layer"
+  aria-hidden="true"
+  class="pointer-events-none m-0 h-[340px] w-full overflow-auto whitespace-pre-wrap break-words px-4 py-4 font-mono text-sm leading-6"
+><template v-for="(line, index) in bulkLines" :key="`highlight-${index}`"><div
+      :class="activeInvalidRowsMap[index + 1]
+        ? 'bg-rose-50 text-rose-600 dark:bg-rose-950/30 dark:text-rose-300'
+        : 'text-slate-500 dark:text-slate-400'"
+    >{{ line || ' ' }}</div></template></pre>
 
-              <div v-if="bulkForm.errors.bulk_input" class="mt-2 text-sm text-rose-500">
-                {{ bulkForm.errors.bulk_input }}
-              </div>
+  <textarea
+    ref="bulkInputRef"
+    v-model="bulkForm.bulk_input"
+    rows="14"
+    spellcheck="false"
+    class="absolute inset-0 h-full w-full resize-none bg-transparent px-4 py-4 font-mono text-sm leading-6 text-transparent outline-none caret-slate-900 dark:caret-white"
+    placeholder="tiktok|cs2fps|VoiceMaker|bucket-1234|CS2 launch options|Caption|Description|#hashtags"
+    @scroll="syncBulkHighlightScroll"
+  />
+</div>
+
+<div v-if="bulkForm.errors.bulk_input" class="mt-2 text-sm text-rose-500">
+  {{ bulkForm.errors.bulk_input }}
+</div>
+
             </div>
 
             <div
@@ -672,7 +773,7 @@ watch(
                   <div class="mt-1 text-xl font-black text-emerald-600 dark:text-emerald-400">
                     {{ importPreview.summary?.safe_import_count || 0 }}
                   </div>
-                </div>
+                </div>               
 
                 <div class="rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950/60">
                   <div class="text-xs uppercase tracking-[0.15em] text-slate-500 dark:text-slate-400">Skipped Duplicates</div>
@@ -749,21 +850,32 @@ watch(
   </div>
 
   <div class="mt-4 rounded-2xl border border-dashed border-rose-300 bg-white/70 p-4 dark:border-rose-800 dark:bg-slate-950/40">
-    <div class="text-sm font-black text-slate-900 dark:text-white">
-      Need help fixing the rows?
-    </div>
-    <p class="mt-2 text-sm leading-6 text-slate-600 dark:text-amber-200">
-  Copy the problematic rows into ChatGPT and ask it to return only corrected bulk import lines.
-</p>
+  <div class="text-sm font-black text-slate-900 dark:text-white">
+    Need help fixing the rows?
+  </div>
 
+  <p class="mt-2 text-sm leading-6 text-slate-600 dark:text-amber-200">
+    Copy the problematic rows into ChatGPT and ask it to return only corrected bulk import lines.
+  </p>
+
+  <div class="mt-3 flex flex-wrap gap-2">
     <button
       type="button"
       @click="copyInvalidRowsPrompt"
-      class="mt-3 rounded-xl border border-cyan-300 px-4 py-2 text-sm font-bold text-cyan-700 transition hover:bg-cyan-50 dark:border-cyan-800 dark:text-cyan-300 dark:hover:bg-cyan-950/30"
+      class="rounded-xl border border-cyan-300 px-4 py-2 text-sm font-bold text-cyan-700 transition hover:bg-cyan-50 dark:border-cyan-800 dark:text-cyan-300 dark:hover:bg-cyan-950/30"
     >
       Copy ChatGPT Fix Prompt
     </button>
+
+    <button
+      type="button"
+      @click="removeAllInvalidLines"
+      class="rounded-xl bg-rose-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-rose-700"
+    >
+      Remove All Invalid Lines
+    </button>
   </div>
+</div>
 </div>
 
               <div

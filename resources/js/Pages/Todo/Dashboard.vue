@@ -236,7 +236,16 @@ const availableUpcomingDates = computed(() => {
   return Object.keys(groupedUpcomingPlan.value).sort((a, b) => a.localeCompare(b))
 })
 
+
 const selectedUpcomingDate = ref('')
+
+const getTodayDateKey = () => {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
 
 const ensureUpcomingDateSelected = () => {
   if (!availableUpcomingDates.value.length) {
@@ -244,9 +253,28 @@ const ensureUpcomingDateSelected = () => {
     return
   }
 
-  if (!selectedUpcomingDate.value || !availableUpcomingDates.value.includes(selectedUpcomingDate.value)) {
-    selectedUpcomingDate.value = availableUpcomingDates.value[0]
+  if (
+    selectedUpcomingDate.value &&
+    availableUpcomingDates.value.includes(selectedUpcomingDate.value)
+  ) {
+    return
   }
+
+  const todayKey = getTodayDateKey()
+
+  if (availableUpcomingDates.value.includes(todayKey)) {
+    selectedUpcomingDate.value = todayKey
+    return
+  }
+
+  const pastOrTodayDates = availableUpcomingDates.value.filter((date) => date <= todayKey)
+
+  if (pastOrTodayDates.length) {
+    selectedUpcomingDate.value = pastOrTodayDates[pastOrTodayDates.length - 1]
+    return
+  }
+
+  selectedUpcomingDate.value = ''
 }
 
 const selectedUpcomingItems = computed(() => {
@@ -316,6 +344,8 @@ const copyText = async (value, successMessage = 'Copied.') => {
     document.body.removeChild(textarea)
   }
 }
+
+const todayDateKey = new Date().toISOString().slice(0, 10)
 
 const copyFullPost = async (item) => {
   const parts = []
